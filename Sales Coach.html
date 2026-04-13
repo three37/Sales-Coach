@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Live Coach · Thomas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080b10; --surface: #0f1318; --card: #141a22; --border: #1e2633;
+    --accent: #00e5ff; --green: #00e676; --yellow: #ffd740;
+    --red: #ff5252; --orange: #ff9100; --text: #e8edf5; --muted: #6b7a90;
+    --mono: 'DM Mono', monospace; --sans: 'DM Sans', sans-serif; --display: 'Syne', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; display: flex; flex-direction: column; height: 100dvh; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 8px; }
+  .topbar-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background 0.3s, box-shadow 0.3s; }
+  .dot.listening { background: var(--red); box-shadow: 0 0 0 4px rgba(255,82,82,0.25); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 3px rgba(255,82,82,0.25); } 50% { box-shadow: 0 0 0 7px rgba(255,82,82,0.1); } }
+  .customer-tag { font-family: var(--display); font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .step-pill { font-family: var(--mono); font-size: 10px; color: var(--accent); background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.25); padding: 3px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+  .mic-btn { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: rgba(255,82,82,0.1); border: 1.5px solid rgba(255,82,82,0.3); color: var(--red); font-size: 20px; cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
+  .mic-btn.active { background: rgba(255,82,82,0.2); border-color: var(--red); box-shadow: 0 0 0 4px rgba(255,82,82,0.15); }
+  .mic-btn.off { background: rgba(255,255,255,0.04); border-color: var(--border); color: var(--muted); }
+
+  .step-tracker { display: flex; gap: 4px; padding: 8px 12px; overflow-x: auto; flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+  .step-tracker::-webkit-scrollbar { display: none; }
+  .stp { flex: 1; min-width: 22px; height: 5px; border-radius: 3px; background: var(--border); transition: background 0.3s; cursor: pointer; }
+  .stp.done { background: var(--green); }
+  .stp.current { background: var(--accent); box-shadow: 0 0 6px rgba(0,229,255,0.5); }
+
+  .coach-area { flex: 1; overflow-y: auto; padding: 10px 12px 6px; display: flex; flex-direction: column; gap: 9px; -webkit-overflow-scrolling: touch; }
+
+  .coach-card { border-radius: 14px; padding: 13px 14px 13px 14px; border: 1px solid; animation: slideUp 0.2s ease-out; flex-shrink: 0; position: relative; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .coach-card.move      { background: rgba(0,230,118,0.06);  border-color: rgba(0,230,118,0.25); }
+  .coach-card.objection { background: rgba(255,82,82,0.07);  border-color: rgba(255,82,82,0.3); }
+  .coach-card.trigger   { background: rgba(255,215,64,0.06); border-color: rgba(255,215,64,0.28); }
+  .coach-card.tip       { background: rgba(0,229,255,0.05);  border-color: rgba(0,229,255,0.2); }
+  .coach-card.warning   { background: rgba(255,145,0,0.06);  border-color: rgba(255,145,0,0.28); }
+  .card-label { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 6px; }
+  .card-label.move      { color: var(--green); }
+  .card-label.objection { color: var(--red); }
+  .card-label.trigger   { color: var(--yellow); }
+  .card-label.tip       { color: var(--accent); }
+  .card-label.warning   { color: var(--orange); }
+  .card-body { font-size: 13px; line-height: 1.6; color: var(--text); padding-right: 20px; }
+  .script-line { font-style: italic; padding-left: 10px; margin-top: 8px; line-height: 1.7; font-size: 13px; border-left: 2px solid; }
+  .script-line.green  { border-color: var(--green);  color: #b0f0d0; }
+  .script-line.red    { border-color: var(--red);    color: #ffd0d0; }
+  .script-line.yellow { border-color: var(--yellow); color: #f0e8b0; }
+  .script-line.blue   { border-color: var(--accent); color: #c5d8f0; }
+  .dismiss { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--muted); font-size: 13px; cursor: pointer; padding: 2px 5px; border-radius: 5px; line-height: 1; }
+  .dismiss:active { background: rgba(255,255,255,0.08); }
+
+  .transcript-strip { background: var(--surface); border-top: 1px solid var(--border); padding: 7px 14px; flex-shrink: 0; min-height: 36px; display: flex; align-items: center; gap: 8px; }
+  .transcript-label { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; text-transform: uppercase; letter-spacing: 1px; }
+  .transcript-text { font-size: 12px; color: var(--muted); font-style: italic; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .transcript-text.active { color: var(--text); }
+
+  .quick-bar { display: flex; gap: 7px; padding: 7px 12px 10px; overflow-x: auto; flex-shrink: 0; background: var(--bg); border-top: 1px solid var(--border); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .quick-bar::-webkit-scrollbar { display: none; }
+  .qbtn { flex-shrink: 0; padding: 7px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 11px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .qbtn:active { opacity: 0.65; transform: scale(0.97); }
+  .qbtn.red    { border-color: rgba(255,82,82,0.35);  color: #ffa0a0; background: rgba(255,82,82,0.07); }
+  .qbtn.yellow { border-color: rgba(255,215,64,0.35); color: #ffe080; background: rgba(255,215,64,0.07); }
+  .qbtn.green  { border-color: rgba(0,230,118,0.35);  color: #80ffc0; background: rgba(0,230,118,0.07); }
+  .qbtn.blue   { border-color: rgba(0,229,255,0.35);  color: #80eeff; background: rgba(0,229,255,0.07); }
+  .qbtn.orange { border-color: rgba(255,145,0,0.35);  color: #ffb870; background: rgba(255,145,0,0.07); }
+
+  .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 12px; padding: 24px; text-align: center; }
+  .welcome-icon { font-size: 44px; }
+  .welcome-title { font-family: var(--display); font-size: 22px; font-weight: 800; }
+  .welcome-sub { color: var(--muted); font-size: 14px; line-height: 1.6; max-width: 300px; }
+  .start-btn { margin-top: 8px; padding: 14px 36px; border-radius: 50px; border: none; background: var(--red); color: #fff; font-family: var(--display); font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 0 24px rgba(255,82,82,0.35); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="dot" id="statusDot"></div>
+    <div class="customer-tag">Terrence &amp; Barbara Thomas</div>
+  </div>
+  <div class="step-pill" id="stepPill">ENTRY</div>
+  <button class="mic-btn off" id="micBtn" onclick="toggleMic()">🎙</button>
+</div>
+
+<div class="step-tracker" id="stepTracker"></div>
+
+<div class="coach-area" id="coachArea">
+  <div class="welcome" id="welcomeState">
+    <div class="welcome-icon">🎯</div>
+    <div class="welcome-title">Live Coach Ready</div>
+    <div class="welcome-sub">Tap Start — I listen for objections, emotional triggers, and buying signals and fire word-for-word scripts instantly. No internet needed.</div>
+    <button class="start-btn" onclick="toggleMic()">▶ Start Listening</button>
+  </div>
+</div>
+
+<div class="transcript-strip">
+  <div class="transcript-label">HEARD</div>
+  <div class="transcript-text" id="transcriptText">Tap mic to start…</div>
+</div>
+
+<div class="quick-bar">
+  <div class="qbtn red"    onclick="fireCard('other_quotes')">💬 Other quotes</div>
+  <div class="qbtn red"    onclick="fireCard('too_expensive')">💰 Too expensive</div>
+  <div class="qbtn yellow" onclick="fireCard('think_about_it')">🤔 Think about it</div>
+  <div class="qbtn yellow" onclick="fireCard('not_tonight')">📅 Not tonight</div>
+  <div class="qbtn green"  onclick="fireCard('close_now')">✅ Close now</div>
+  <div class="qbtn blue"   onclick="fireCard('emotional_trigger')">❤️ Emotional trigger</div>
+  <div class="qbtn orange" onclick="fireCard('spouse_quiet')">👥 Barbara quiet</div>
+  <div class="qbtn blue"   onclick="fireCard('financing')">💳 Financing</div>
+  <div class="qbtn red"    onclick="fireCard('competitor')">🏢 Competitor</div>
+  <div class="qbtn green"  onclick="fireCard('buying_signal')">👍 Buying signal</div>
+  <div class="qbtn yellow" onclick="fireCard('safety_concern')">⚠️ Safety concern</div>
+  <div class="qbtn blue"   onclick="fireCard('silence')">🤫 Silence — hold it</div>
+</div>
+
+<script>
+const STEPS = ["Entry","Warm Up","Discovery","Co. Story","Product","Pre-Close","Price","Close","Measure","Post-Close"];
+let currentStep = 0;
+
+function renderSteps() {
+  document.getElementById('stepTracker').innerHTML = STEPS.map((s,i) =>
+    `<div class="stp ${i<currentStep?'done':i===currentStep?'current':''}" title="${s}" onclick="setStep(${i})"></div>`
+  ).join('');
+  document.getElementById('stepPill').textContent = STEPS[currentStep].toUpperCase();
+}
+function setStep(n) { currentStep = n; renderSteps(); }
+renderSteps();
+
+// ── CARD LIBRARY ────────────────────────────────────────────────────────────
+const CARDS = {
+  other_quotes:     { type:'objection', icon:'🛡', label:'Other Quotes',        body:'Inoculate now — make everything else feel generic before they walk out.',                                                                   script:'I totally get that. Can I ask what you\'d be comparing? Most companies are tile guys or generic panels. Nobody makes their own acrylic like we do. If there\'s a specific concern, let\'s tackle it right now.',         sc:'red' },
+  too_expensive:    { type:'objection', icon:'💰', label:'Price Objection',      body:'Don\'t drop price first. Anchor to value, then open financing as the bridge.',                                                              script:'What were you budgeting for this? … Okay, let me look at the package. And just so you know — we do have financing, which puts you in the low hundreds a month. Does that change things?',                              sc:'red' },
+  think_about_it:   { type:'objection', icon:'🤔', label:'Think About It',       body:'"Think about it" is never the real objection. Smoke out what\'s actually holding them back.',                                              script:'Of course — can I ask what part? Is it the price, the timing, or the product itself? There\'s usually one thing. Let\'s just talk through it.',                                                                          sc:'red' },
+  not_tonight:      { type:'objection', icon:'📅', label:'Not Tonight',          body:'Reinforce one-call pricing without pressure. Make it feel like their decision.',                                                           script:'Totally understand. Just want you to know the pricing I can offer tonight is specific to this visit. What would need to be true for you to feel good going forward?',                                                   sc:'red' },
+  competitor:       { type:'objection', icon:'🏢', label:'Competitor Mentioned', body:'Never trash competitors. Pivot to what makes Bath Fitter proprietary and unmatched.',                                                      script:'Good company. The difference is we manufacture our own acrylic — nobody else has it. That\'s why our warranty covers labor too, not just product. Apples to oranges.',                                                   sc:'red' },
+  financing_obj:    { type:'objection', icon:'💳', label:'Budget Concern',       body:'Shift from total to monthly. Big numbers shrink fast when broken into payments.',                                                          script:'We have financing — you\'re looking at roughly [$ per month] to get this done now. Most people find that easier. Want me to run those numbers?',                                                                         sc:'red' },
+  safety_concern:   { type:'trigger',   icon:'⚠️', label:'Safety / Falling',    body:'Fear of falling is your strongest close lever. Use it with empathy — this is visceral.',                                                   script:'That\'s exactly why people make this change. A zero-threshold shower eliminates that risk completely. That\'s not a feature — that\'s peace of mind every single day.',                                                  sc:'yellow' },
+  aging_mobility:   { type:'trigger',   icon:'🚶', label:'Mobility / Aging',     body:'Deeply personal. Validate it, then tie the product directly to their independence.',                                                       script:'Doing this now — proactively — is the smartest move. You\'re not waiting for a problem, you\'re preventing one.',                                                                                                        sc:'yellow' },
+  grandkids:        { type:'trigger',   icon:'👶', label:'Family / Grandkids',   body:'Family was mentioned. Paint the picture of enjoying that space with the people they love.',                                                script:'Imagine a shower that works for everyone — you, the grandkids, anyone who visits. That\'s what we\'re building here.',                                                                                                   sc:'yellow' },
+  tired_of_tub:     { type:'trigger',   icon:'😤', label:'Frustration w/ Tub',  body:'They\'re venting. Validate the frustration — it\'s your opening.',                                                                         script:'That frustration doesn\'t go away on its own. Every day you put it off is another day dealing with it. Let\'s fix it tonight.',                                                                                          sc:'yellow' },
+  remodel_plans:    { type:'trigger',   icon:'🏠', label:'Remodel Mode',         body:'They\'re in upgrade mode. Position Bath Fitter as the anchor of the whole refresh.',                                                       script:'This is the perfect time — do this first and everything else in the bathroom looks better around it.',                                                                                                                   sc:'yellow' },
+  emotional_trigger:{ type:'trigger',   icon:'❤️', label:'Emotional Hook',      body:'Something emotional just surfaced. STOP selling features — mirror their feeling back.',                                                     script:'It sounds like this is about more than just the bathroom. What would it really mean for you to have this done?',                                                                                                          sc:'yellow' },
+  buying_signal:    { type:'move',      icon:'⚡', label:'Buying Signal',        body:'Agreement detected. Stop selling — every extra word is a risk. Move to close.',                                                            script:'Let\'s get you on the schedule — do mornings or afternoons work better for your install day?',                                                                                                                          sc:'green' },
+  close_now:        { type:'move',      icon:'✅', label:'Close Now',            body:'The room is warm. Assumptive close immediately. Don\'t wait.',                                                                              script:'Are you ready to go ahead and get this done tonight? Let\'s get you on the books.',                                                                                                                                       sc:'green' },
+  price_question:   { type:'move',      icon:'💲', label:'Price Asked',          body:'Price question = buying signal. Build book value first, then present with confidence.',                                                    script:'Before I give you the number, let me show you exactly what\'s included — because the value is what makes the price make sense.',                                                                                        sc:'green' },
+  install_question: { type:'move',      icon:'📆', label:'Install Question',     body:'Asking about timeline = buying signal. Answer, then pivot to scheduling.',                                                                 script:'We can typically get you scheduled within [X weeks]. If we lock in tonight, I can give you a date right now. Want to do that?',                                                                                           sc:'green' },
+  warranty_question:{ type:'move',      icon:'🛡', label:'Warranty Question',    body:'Seriously considering it. Hammer the lifetime coverage hard.',                                                                             script:'Lifetime warranty — parts AND labor. Nobody else in this industry covers labor. That\'s the difference.',                                                                                                                sc:'green' },
+  buying_signal2:   { type:'move',      icon:'⚡', label:'Agreement Signal',     body:'They said something positive. Lock it in and advance.',                                                                                    script:'I\'m glad that resonates — that\'s exactly why people choose us. So let\'s get this moving for you.',                                                                                                                   sc:'green' },
+  spouse_quiet:     { type:'warning',   icon:'👥', label:'Barbara Gone Quiet',   body:'Silent spouse = silent veto. Bring her in RIGHT NOW or you lose the sale at the kitchen table.',                                           script:'Barbara, I want to make sure I\'m hearing you too — what matters most to YOU about the new shower?',                                                                                                                     sc:'blue' },
+  financing:        { type:'move',      icon:'💳', label:'Financing Bridge',     body:'Use monthly payments to shrink the price gap. Works every time on fence-sitters.',                                                         script:'We have financing — puts you around [$ / month]. Most people find it easier to think about it that way. Want me to run those numbers?',                                                                                  sc:'green' },
+  pre_close_check:  { type:'tip',       icon:'🎯', label:'Pre-Close Check',      body:'Before you reveal price — confirm both DMs are bought in on the product.',                                                                 script:'Before I put numbers together — is this what you\'re looking for? Does everything we\'ve talked about match what you had in mind?',                                                                                       sc:'blue' },
+  silence:          { type:'tip',       icon:'🤫', label:'Hold the Silence',     body:'You just closed or presented price. STOP TALKING. The next person to speak loses. Hold it.',                                               script: null, sc:'blue' },
+};
+
+// ── KEYWORD TRIGGERS ────────────────────────────────────────────────────────
+// [keywords, cardKey, cooldownMs]
+const KEYWORD_MAP = [
+  [['other company','another company','other companies','get more quotes','other quotes','shop around','compare prices','price around','looking around','other estimates','someone else coming','few more companies','few more bids'], 'other_quotes', 25000],
+  [['too much','too expensive','more than we','more than i','out of our budget','over budget','can\'t afford','that\'s a lot','thats a lot','that is a lot','more than expected','higher than we','costs that much','a lot of money'], 'too_expensive', 25000],
+  [['think about it','think it over','need to think','sleep on it','let me think','got to think','we\'ll think','have to think'], 'think_about_it', 25000],
+  [['not tonight','not today','not right now','come back another','another time','next week','next month','not ready','not sure yet','want to wait'], 'not_tonight', 25000],
+  [['re-bath','rebath','home depot','lowe\'s','lowes','bath planet','case design','tile contractor','another contractor','other contractor','other company came'], 'competitor', 25000],
+  [['monthly payment','financing','finance it','payment plan','how much a month','per month','monthly cost','can we finance'], 'financing_obj', 20000],
+  [['fall','falling','slipped','slip','scared to','afraid to','dangerous','can\'t get in','hard to get in','difficult to get in','getting in and out','step over'], 'safety_concern', 30000],
+  [['getting older','getting old','mobility','hard to move','my knees','my back','arthritis','my hip','not as young','aging','can\'t stand long','balance'], 'aging_mobility', 30000],
+  [['grandkids','grandchildren','grandkid','grandson','granddaughter','kids visiting','family coming','kids coming'], 'grandkids', 30000],
+  [['hate this tub','hate the tub','tired of the tub','sick of the tub','don\'t use it','never use it','tub is ugly','outdated','old tub','falling apart','ugly bathroom'], 'tired_of_tub', 30000],
+  [['remodel','renovate','updating the','refresh the','makeover','redoing','doing the whole bathroom','whole bathroom'], 'remodel_plans', 30000],
+  [['how soon','when can you','how long does it take','how long will it','when would you start','how long to install','one day install','same day'], 'install_question', 20000],
+  [['how much','what\'s the price','what is the price','total cost','how much does it','what would it cost','what\'s the total','whats the total'], 'price_question', 20000],
+  [['warranty','guarantee','how long does it last','will it hold up','will it last','covered if'], 'warranty_question', 20000],
+  [['sounds good','i like that','love that','that\'s great','thats great','that looks nice','that\'s beautiful','thats beautiful','really nice','love it','that\'s perfect','thats perfect','let\'s do it','lets do it','move forward','ready to go'], 'buying_signal', 20000],
+];
+
+const lastFired = {};
+function canFire(key, ms) {
+  const now = Date.now();
+  if (!lastFired[key] || now - lastFired[key] > ms) { lastFired[key] = now; return true; }
+  return false;
+}
+
+// ── SPEECH RECOGNITION ──────────────────────────────────────────────────────
+let recognition = null, isListening = false, fullTranscript = '';
+
+function toggleMic() { isListening ? stopListening() : startListening(); }
+
+function startListening() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('Speech recognition not available. Use Safari on iOS or Chrome.'); return; }
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('statusDot').className = 'dot listening';
+    document.getElementById('micBtn').className = 'mic-btn active';
+    document.getElementById('micBtn').textContent = '🔴';
+    const w = document.getElementById('welcomeState');
+    if (w) w.style.display = 'none';
+    updateTranscript('Listening…', false);
+  };
+
+  recognition.onresult = (e) => {
+    let interim = '', added = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript.toLowerCase();
+      if (e.results[i].isFinal) { fullTranscript += ' ' + t; added += t; }
+      else interim += t;
+    }
+    updateTranscript(interim || added, true);
+    if (added) scan(fullTranscript.slice(-400)); // scan last ~400 chars
+  };
+
+  recognition.onerror = (e) => { if (e.error === 'not-allowed') stopListening(); };
+  recognition.onend = () => { if (isListening) setTimeout(() => { try { recognition.start(); } catch(e){} }, 300); };
+  try { recognition.start(); } catch(e) {}
+}
+
+function stopListening() {
+  isListening = false;
+  if (recognition) try { recognition.stop(); } catch(e) {}
+  document.getElementById('statusDot').className = 'dot';
+  document.getElementById('micBtn').className = 'mic-btn off';
+  document.getElementById('micBtn').textContent = '🎙';
+  updateTranscript('Paused — tap mic to resume', false);
+}
+
+function scan(text) {
+  for (const [keywords, key, cooldown] of KEYWORD_MAP) {
+    for (const kw of keywords) {
+      if (text.includes(kw) && canFire(key, cooldown)) {
+        addCard(CARDS[key]); scrollBottom(); break;
+      }
+    }
+  }
+}
+
+function fireCard(key) { if (CARDS[key]) { addCard(CARDS[key]); scrollBottom(); } }
+
+function addCard(card) {
+  const w = document.getElementById('welcomeState');
+  if (w) w.style.display = 'none';
+  const area = document.getElementById('coachArea');
+  const div = document.createElement('div');
+  div.className = `coach-card ${card.type}`;
+  div.innerHTML = `
+    <button class="dismiss" onclick="this.parentElement.remove()">✕</button>
+    <div class="card-label ${card.type}">${card.icon} ${card.label}</div>
+    <div class="card-body">${card.body}${card.script ? `<div class="script-line ${card.sc||'blue'}">"${card.script}"</div>` : ''}</div>
+  `;
+  area.appendChild(div);
+  const all = area.querySelectorAll('.coach-card');
+  if (all.length > 25) all[0].remove();
+}
+
+function updateTranscript(text, active) {
+  const el = document.getElementById('transcriptText');
+  el.textContent = text;
+  el.className = 'transcript-text' + (active ? ' active' : '');
+}
+
+function scrollBottom() {
+  const a = document.getElementById('coachArea');
+  setTimeout(() => { a.scrollTop = a.scrollHeight; }, 50);
+}
+
+// Seed card
+setTimeout(() => {
+  addCard({ type:'tip', icon:'🎯', label:'Thomas Briefing', sc:'blue',
+    body:'Home Buddy lead — assume competing quotes exist. Both DMs present. Tub-to-shower conversion. Win on product quality, one-day install, lifetime warranty. Get Barbara talking early.',
+    script:'Hi — I\'m Lee with Bath Fitter. Are you Terrence? Great, nice to meet you both.' });
+}, 300);
+</script>
+</body>
+</html>
