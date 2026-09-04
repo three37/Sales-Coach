@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ex Nihilo</title>
+<meta name="description" content="Ten interactive machines, from a GPU ray marcher to a Lisp interpreter, computed live in the browser with no libraries, frameworks or images.">
+<meta name="theme-color" content="#0f1216">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="progress" aria-hidden="true"></div>
+
+<nav class="nav" aria-label="Machines">
+  <a class="brand" href="#hero">Ex Nihilo</a>
+  <div class="nav-links">
+    <a href="#reaction">Reaction</a><a href="#fractal">Fractal</a><a href="#cloth">Cloth</a><a href="#boids">Flock</a><a href="#fourier">Epicycles</a><a href="#maze">Maze</a><a href="#othello">Othello</a><a href="#lisp">Lisp</a><a href="#synth">Synth</a><a href="#colophon">Colophon</a>
+  </div>
+</nav>
+
+<header id="hero" class="machine hero">
+  <div class="stage"><canvas aria-label="A field of molten metallic shapes rendered live by a ray-marching shader" role="img"></canvas></div>
+  <div class="wrap hero-copy">
+    <p class="eyebrow">A showcase, written from scratch in one sitting</p>
+    <h1>Ex <em>Nihilo</em></h1>
+    <p class="lede">Ten interactive machines, from a ray marcher to a Lisp. Every pixel, sound and decision on this page is computed live from code written for it: no libraries, no frameworks, no images.</p>
+    <div class="hero-actions">
+      <a class="btn primary" href="#reaction">Enter the workshop</a>
+      <button class="btn" type="button" data-source="hero" data-title="hero.js · the shader behind this scene">Read this shader</button>
+    </div>
+    <p class="hint">Move the pointer to orbit the scene</p>
+  </div>
+</header>
+
+<section class="intro">
+  <div class="wrap">
+    <div class="intro-grid">
+      <div class="reveal">
+        <h3>Nothing is imported.</h3>
+        <p>The physics, the audio synthesis, the game engine, the programming language: each is implemented on this page in plain JavaScript and GLSL. The only outside resources are three typefaces.</p>
+      </div>
+      <div class="reveal">
+        <h3>Only what you see runs.</h3>
+        <p>Each machine wakes when it scrolls into view and sleeps when it leaves, so ten simulations cost no more than one. Watch the frame around a bench brighten as it comes alive.</p>
+      </div>
+      <div class="reveal">
+        <h3>Every machine shows its source.</h3>
+        <p>Every bench has a “View source” control that opens the real code running on this page, highlighted by a tokenizer that is itself part of the page. Nothing is hidden behind a build step.</p>
+      </div>
+    </div>
+    <div class="stats reveal" aria-label="Page statistics, measured live">
+      <div class="stat"><b data-stat="lines">…</b><small>lines of HTML, CSS &amp; JS</small></div>
+      <div class="stat"><b data-stat="kb">…</b><small>kilobytes, uncompressed</small></div>
+      <div class="stat"><b data-stat="machines">10</b><small>machines</small></div>
+      <div class="stat"><b>0</b><small>dependencies</small></div>
+    </div>
+  </div>
+</section>
+
+<main>
+  <section class="machine" id="reaction">
+    <div class="wrap bench">
+      <aside class="label reveal">
+        <p class="tags"><span>GLSL</span><span>Gray–Scott</span><span>Ping-pong framebuffers</span></p>
+        <h2>Reaction, <em>diffusion</em></h2>
+        <p class="desc">Two virtual chemicals spread across a float texture and react, twelve times a frame, on the GPU. Change the feed and kill rates by a few thousandths and the same equation grows coral, dividing cells, or worms. Press and drag to paint chemical into the dish.</p>
+        <div class="controls">
+          <div class="seg" role="group" aria-label="Preset">
+            <button class="btn on" type="button" data-preset="coral">Coral</button>
+            <button class="btn" type="button" data-preset="mitosis">Mitosis</button>
+            <button class="btn" type="button" data-preset="worms">Worms</button>
+            <button class="btn" type="button" data-preset="holes">Holes</button>
+          </div>
+          <button class="btn ghost" type="button" data-action="reseed">Reseed</button>
+        </div>
+        <button class="btn src" type="button" data-source="reaction" data-title="reaction.js">View source</button>
+      </aside>
+      <div class="stage"><canvas aria-label="Reaction-diffusion simulation you can paint into" role="img"></canvas></div>
+    </div>
+  </section>
+
+  <section class="machine" id="fractal">
+    <div class="wrap bench">
+      <aside class="label reveal">
+        <p class="tags"><span>GLSL</span><span>Escape-time iteration</span><span>Smooth colouring</span></p>
+        <h2>The <em>Mandelbrot</em> set</h2>
+        <p class="desc">Each pixel iterates z ← z² + c up to four hundred times and is coloured by how quickly it escapes. Scroll to zoom toward the pointer, drag to pan, double-click to dive. In Julia mode the pointer becomes the constant c and the whole set morphs as you move. Around a hundred-thousand-fold magnification the 32-bit floats run out of digits, and the readout will tell you so.</p>
+        <div class="controls">
+          <button class="btn" type="button" data-action="julia">Julia mode</button>
+          <button class="btn ghost" type="button" data-action="reset">Reset view</button>
+        </div>
+        <button class="btn src" type="button" data-source="fractal" data-title="fractal.js">View source</button>
+      </aside>
+      <div class="stage"><canvas aria-label="Zoomable Mandelbrot and Julia set explorer" role="img"></canvas><div class="readout" data-readout>centre −0.55 + 0.00i · 1.0×</div></div>
+    </div>
+  </section>
+
+  <section class="machine" id="cloth">
+    <div class="wrap bench">
+      <aside class="label reveal">
+        <p class="tags"><span>Canvas 2D</span><span>Verlet integration</span><span>Constraint relaxation</span></p>
+        <h2>A <em>tearable</em> cloth</h2>
+        <p class="desc">Twelve hundred points, each remembering only where it was a moment ago. Their neighbours are joined by distance constraints that are relaxed four times per step, which is what gives the fabric its weight and drape. Drag it around, or pick up the scissors and cut. Threads glow as they stretch, and snap when pushed too far.</p>
+        <div class="controls">
+          <div class="seg" role="group" aria-label="Tool">
+            <button class="btn on" type="button" data-mode="drag">Hand</button>
+            <button class="btn" type="button" data-mode="cut">Scissors</button>
+          </div>
+          <button class="btn ghost" type="button" data-action="reset">New cloth</button>
+        </div>
+        <button class="btn src" type="button" data-source="cloth" data-title="cloth.js">View source</button>
+      </aside>
+      <div class="stage"><canvas aria-label="Cloth simulation you can drag and cut" role="img"></canvas></div>
+    </div>
+  </section>
+
+  <section class="machine" id="boids">
+    <div class="wrap bench">
+      <aside class="label reveal">
+        <p class="tags"><span>Canvas 2D</span><span>Reynolds 1986</span><span>Spatial hash</span></p>
+        <h2>A flock with <em>no leader</em></h2>
+        <p class="desc">Three hundred and sixty birds, each obeying three local rules: keep your distance, match your neighbours’ heading, drift toward their centre. None of them knows what a flock is. A grid of buckets keeps every neighbour lookup cheap. Move the pointer into the sky and become the hawk.</p>
+        <button class="btn src" type="button" data-source="boids" data-title="boids.js">View source</button>
+      </aside>
+      <div class="stage"><canvas aria-label="Flocking simulation; the pointer acts as a predator" role="img"></canvas></div>
+    </div>
+  </section>
+
+  <section class="machine" id="fourier">
+    <div class="wrap bench">
+      <aside class="label reveal">
+        <p class="tags"><span>Canvas 2D</span><span>Discrete Fourier transform</span><span>Complex numbers</span></p>
+        <h2>Anything, as <em>circles</em></h2>
+        <p class="desc">Draw a closed shape with the pointer. The machine treats your line as a list of complex numbers, takes its Fourier transform, and rebuilds it from spinning circles chained tip to tail, largest first. Keep a few terms for a ghost of the shape; keep them all and the pen traces it exactly.</p>
+        <div class="controls">
+          <label>Terms <input type="range" min="1" max="240" value="40" data-terms> <output data-terms-out>40</output></label>
+          <button class="btn ghost" type="button" data-action="heart">Back to the heart</button>
+        </div>
+        <button class="btn src" type="button" data-source="fourier" data-title="fourier.js">View source</button>
+      </aside>
+      <div class="stage"><canvas aria-label="Fourier epicycle drawing machine; draw a shape to decompose it" role="img"></canvas></div>
+    </div>
+  </section>
+
+  <section class="machine" id="maze">
+    <div class="wrap bench">
+      <aside class="label reveal">
+        <p class="tags"><span>Depth-first carving</span><span>A* search</span><span>Binary heap</span></p>
+        <h2>Finding the <em>way out</em></h2>
+        <p class="desc">A maze is carved by a depth-first walk, then solved live. The heuristic weight changes the solver’s character: at zero it is Dijkstra, thorough and blind; at one it is textbook A*, optimal and guided; at three it is greedy, fast and occasionally wrong. Cyan is what it explored, brass is the route it found. The count of cells expanded is the honest measure of how hard each one had to think.</p>
+        <div class="controls">
+          <div class="seg" role="group" aria-label="Heuristic weight">
+            <button class="btn" type="button" data-weight="0">Dijkstra</button>
+            <button class="btn on" type="button" data-weight="1">A*</button>
+            <button class="btn" type="button" data-weight="3">Greedy</button>
+          </div>
+          <button class="btn ghost" type="button" data-action="maze">New maze</button>
+        </div>
+        <button class="btn src" type="button" data-source="maze" data-title="maze.js">View source</button>
+      </aside>
+      <div class="stage"><canvas aria-label="Maze being solved by A* search" role="img"></canvas><div class="readout" data-readout>…</div></div>
+    </div>
+  </section>
+
+  <section class="machine" id="othello">
+    <div class="wrap bench">
+      <aside class="label reveal">
+        <p class="tags"><span>Negamax</span><span>Alpha–beta pruning</span><span>Iterative deepening</span></p>
+        <h2>An opponent that <em>looks ahead</em></h2>
+        <p class="desc">Reversi against an engine that searches as many moves ahead as it can in under half a second, trying the most promising lines first so it can prune the rest. It weighs corners, edges and mobility, and counts discs only when the end is near. You play the dark discs; the dots are your legal moves. It will tell you how deep it looked and how many positions it considered.</p>
+        <div class="controls">
+          <button class="btn" type="button" data-action="new">New game</button>
+          <button class="btn ghost" type="button" data-action="white">Let the engine open</button>
+        </div>
+        <p class="desc" style="margin-top:18px" data-status>Your move</p>
+        <p class="desc" style="margin-top:6px;color:var(--cyan)" data-thought></p>
+        <button class="btn src" type="button" data-source="othello" data-title="othello.js">View source</button>
+      </aside>
+      <div class="stage square"><canvas aria-label="Reversi board; click a highlighted square to move" role="img"></canvas></div>
+    </div>
+  </section>
+
+  <section class="machine" id="lisp">
+    <div class="wrap bench">
+      <aside class="label reveal">
+        <p class="tags"><span>Tokenizer</span><span>Reader</span><span>Evaluator with tail calls</span></p>
+        <h2>A <em>language</em> in two hundred lines</h2>
+        <p class="desc">A Scheme-flavoured Lisp: closures, recursion, first-class functions, quoting, lexical environments, and proper tail calls, so a loop of a hundred thousand iterations needs no stack. It halts runaway programs before they can freeze the page. Edit anything and run with Ctrl+Enter.</p>
+        <button class="btn src" type="button" data-source="lisp" data-title="lisp.js">View source</button>
+      </aside>
+      <div>
+        <div class="examples">
+          <button class="btn" type="button" data-example="fib">Fibonacci</button>
+          <button class="btn" type="button" data-example="closure">Closures</button>
+          <button class="btn" type="button" data-example="sort">Quicksort</button>
+          <button class="btn" type="button" data-example="tail">Tail calls</button>
+          <button class="btn" type="button" data-example="church">Church numerals</button>
+          <button class="btn primary" type="button" data-action="run">Run</button>
+          <button class="btn ghost" type="button" data-action="clear">Clear</button>
+        </div>
+        <div class="repl">
+          <textarea spellcheck="false" aria-label="Lisp program"></textarea>
+          <div class="repl-out" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="machine" id="synth">
+    <div class="wrap bench">
+      <aside class="label reveal">
+        <p class="tags"><span>Web Audio</span><span>Subtractive synthesis</span><span>Look-ahead scheduler</span></p>
+        <h2>An <em>instrument</em>, not a recording</h2>
+        <p class="desc">There are no samples here. The pluck is two detuned oscillators through a resonant filter that sweeps on every note; the kick is a sine wave whose pitch falls from 160 to 45 Hz in a tenth of a second; the snare and hat are shaped noise. The reverb convolves against an impulse the page synthesises when you press play. Toggle steps, or ask for a new pattern built from Euclidean rhythms and a random walk on a pentatonic scale.</p>
+        <div class="controls">
+          <button class="btn primary" type="button" data-action="play">Play</button>
+          <button class="btn" type="button" data-action="generate">Generate</button>
+          <button class="btn ghost" type="button" data-action="clear">Clear</button>
+          <label>Tempo <input type="range" min="70" max="160" value="112" data-tempo> <output data-tempo-out>112</output></label>
+        </div>
+        <button class="btn src" type="button" data-source="synth" data-title="synth.js">View source</button>
+      </aside>
+      <div class="synth-stage">
+        <div class="seq-grid" role="grid" aria-label="Step sequencer"></div>
+        <div class="scope stage"><canvas aria-label="Oscilloscope and spectrum of the audio output" role="img"></canvas></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer id="colophon">
+  <div class="wrap colophon">
+    <div class="reveal">
+      <h2>Made from <em>nothing</em>, on purpose</h2>
+      <div class="prose">
+        <p>This page was written by Claude in a single session on 4 September 2026, when asked to build something that showed what it could do. Rather than assemble libraries, it chose to build every part in the open: the GPU shaders, the physics, the audio engine, the game engine, the search algorithms and the interpreter are all here in the source, readable from any bench.</p>
+        <p>None of the machines is a toy version. The ray marcher has soft shadows and ambient occlusion. The reaction-diffusion runs on float framebuffers. The Othello engine reaches eight or nine plies. The Lisp has proper tail calls. The synthesizer schedules ahead of the audio clock, the way real sequencers do.</p>
+        <p>Everything here is a starting point. Any bench could become a product, a lesson, or a much larger machine.</p>
+      </div>
+    </div>
+    <dl class="reveal">
+      <dt>Rendering</dt><dd>WebGL2 fragment shaders for the field, dish and fractal; Canvas 2D for everything else</dd>
+      <dt>Audio</dt><dd>Web Audio API: oscillators, biquad filters, a delay line, a convolver, a compressor and an analyser</dd>
+      <dt>Type</dt><dd>Fraunces, IBM Plex Sans and IBM Plex Mono, served by Google Fonts, the page’s only external resources</dd>
+      <dt>Source</dt><dd><a href="https://github.com/three37/Sales-Coach/tree/claude/showcase-website-v4j62l/showcase">github.com/three37/Sales-Coach</a>, in the <code>showcase</code> directory</dd>
+      <dt>Size</dt><dd><span data-stat="lines">…</span> lines, <span data-stat="kb">…</span> KB before compression, measured by the page itself on load</dd>
+    </dl>
+    <p class="fin"><span>Ex Nihilo</span><span>Built for three37 · September 2026</span></p>
+  </div>
+</footer>
+
+<dialog id="source-modal" aria-label="Source code">
+  <div class="modal-head">
+    <span class="modal-title"></span>
+    <span class="modal-meta"></span>
+    <button class="btn ghost" type="button" data-close>Close</button>
+  </div>
+  <pre><code></code></pre>
+</dialog>
+
+<script data-core src="js/core.js"></script>
+<script data-core src="js/gl.js"></script>
+<script data-machine="hero" src="js/hero.js"></script>
+<script data-machine="reaction" src="js/reaction.js"></script>
+<script data-machine="fractal" src="js/fractal.js"></script>
+<script data-machine="cloth" src="js/cloth.js"></script>
+<script data-machine="boids" src="js/boids.js"></script>
+<script data-machine="fourier" src="js/fourier.js"></script>
+<script data-machine="maze" src="js/maze.js"></script>
+<script data-machine="othello" src="js/othello.js"></script>
+<script data-machine="lisp" src="js/lisp.js"></script>
+<script data-machine="synth" src="js/synth.js"></script>
+</body>
+</html>
