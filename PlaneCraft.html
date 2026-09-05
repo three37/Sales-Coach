@@ -90,7 +90,7 @@
   .stg.cur{border-color:var(--blue)}
   .stg.lock{opacity:.55}
   /* launch */
-  .launch-mid{position:fixed;left:0;right:0;top:44%;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;text-align:center}
+  .launch-mid{position:fixed;left:0;right:0;top:22%;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;text-align:center}
   .launch-mid .h{font-size:26px;font-weight:800;text-shadow:0 3px 0 rgba(0,0,0,.3)}
   .launch-mid .s{font-size:14px;font-weight:800;opacity:.9;text-shadow:0 2px 0 rgba(0,0,0,.3)}
   .tension{width:min(320px,80vw);height:22px;border-radius:999px;border:3px solid #fff;background:rgba(27,36,55,.6);overflow:hidden;position:relative}
@@ -111,14 +111,14 @@
   .thr.empty{filter:grayscale(.9);opacity:.5}
   .fstat{display:flex;flex-direction:column;gap:3px;text-shadow:0 2px 0 rgba(0,0,0,.3);text-align:center}
   .fstat b{font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
-  .fstat span{font-size:12px;font-weight:800;letter-spacing:.5px;font-variant-numeric:tabular-nums}
+  .fstat span{font-size:12px;font-weight:800;letter-spacing:.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
   .stall{position:fixed;left:50%;top:30%;transform:translateX(-50%);font-size:28px;font-weight:800;color:#ffb3b3;text-shadow:0 3px 0 rgba(0,0,0,.35);animation:blink .5s ease-in-out infinite;pointer-events:none}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
   .toast{position:fixed;left:50%;top:36%;transform:translate(-50%,-50%) scale(.6);font-size:28px;font-weight:800;text-shadow:0 3px 0 rgba(0,0,0,.3);opacity:0;pointer-events:none;white-space:nowrap}
   .toast.show{animation:pop .9s ease-out forwards}
   @keyframes pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}70%{opacity:1;transform:translate(-50%,-70%) scale(1)}100%{opacity:0;transform:translate(-50%,-90%) scale(1)}}
   .flash{position:fixed;inset:0;background:#ff5b5b;opacity:0;pointer-events:none}
-  .forces{position:fixed;right:12px;top:calc(env(safe-area-inset-top,0px) + 54px);display:flex;flex-direction:column;gap:3px;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-shadow:0 2px 0 rgba(0,0,0,.3);pointer-events:none;font-variant-numeric:tabular-nums;text-align:right}
+  .forces{position:fixed;right:12px;top:calc(env(safe-area-inset-top,0px) + 54px);display:flex;flex-direction:column;gap:3px;font-size:10.5px;font-weight:800;letter-spacing:.5px;pointer-events:none;font-variant-numeric:tabular-nums;text-align:right;background:rgba(27,36,55,.45);padding:6px 9px;border-radius:12px;line-height:1.45}
   /* result */
   .center{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;pointer-events:auto;background:rgba(10,20,40,.35)}
   .card{background:var(--paper);color:var(--ink);border-radius:24px;padding:18px 16px;width:min(420px,100%);box-shadow:0 14px 40px rgba(0,0,0,.3);text-align:center}
@@ -135,6 +135,15 @@
   .intro .sub{font-size:18px;font-weight:800;text-shadow:0 2px 0 rgba(0,0,0,.25)}
   .intro .hint{font-size:13px;font-weight:700;max-width:320px;text-shadow:0 2px 0 rgba(0,0,0,.25);opacity:.95}
   .tiny{position:fixed;bottom:2px;right:8px;font-size:9px;opacity:.5;pointer-events:none}
+  @media (max-height:640px),(max-width:340px){
+    .cbtn{width:52px;height:52px;border-radius:15px;font-size:21px}
+    .thr{width:62px;height:62px;font-size:11px}
+    .fstat b{font-size:24px}
+    .fstat span{font-size:9.5px;letter-spacing:0}
+    .pad{gap:6px}
+    .grid{grid-template-columns:repeat(7,34px);grid-auto-rows:34px}
+    .cell .pt{width:30px;height:30px;font-size:15px}
+  }
   @media (prefers-reduced-motion:reduce){.toast.show,.stall{animation:none;opacity:1}}
 </style>
 </head>
@@ -379,7 +388,7 @@ function buildPlaneMesh(){
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
     const t = g[r][c]; if (!t) continue; const p = PARTS[t]; const x = (c - CENTER) * CELL, z = (r - 4) * CELL; const m = M.partMat[t];
     const add = (geo, mm, sx, sy, sz, dx, dy, dz, rx, ry, rz) => { const o = new THREE.Mesh(geo, mm); o.scale.set(sx, sy, sz); o.position.set(x + (dx||0), (dy||0), z + (dz||0)); o.rotation.set(rx||0, ry||0, rz||0); plane.add(o); return o; };
-    if (p.kind === 'frame') { add(G.box, m, CELL, 0.9, CELL); if (t === 'wood') add(G.box, M.post, CELL*0.9, 0.12, 0.2, 0, 0.5, 0); }
+    if (p.kind === 'frame') { add(G.box, m, CELL * 0.72, 1.0, CELL, 0, 0, 0); if (t === 'wood') add(G.box, M.post, CELL*0.66, 0.12, 0.22, 0, 0.55, 0); }
     else if (p.kind === 'wing') { add(G.box, m, CELL + 0.05, 0.14, CELL * 0.85, 0, 0.2, 0); add(G.box, M.red, CELL * 0.3, 0.16, CELL * 0.85, (c < CENTER ? -0.4 : 0.4), 0.21, 0); }
     else if (p.kind === 'tail') { add(G.box, m, CELL, 0.12, CELL * 0.7, 0, 0.3, 0); add(G.box, m, 0.12, 1.0, CELL * 0.7, 0, 0.8, 0); }
     else if (p.kind === 'nose') { add(G.cone, m, 0.55, CELL, 0.55, 0, 0, 0, -Math.PI/2); }
@@ -635,8 +644,8 @@ function frame(now){
   for (let i = debris.length - 1; i >= 0; i--) { const d = debris[i]; d.userData.life -= dt; d.userData.v.y -= 20 * dt; d.position.addScaledVector(d.userData.v, dt); d.scale.multiplyScalar(0.97); if (d.userData.life <= 0) { scene.remove(d); debris.splice(i, 1); } }
   plane.position.set(S.x, S.y, S.z); plane.rotation.set(0, 0, 0); plane.rotateY(-S.yaw); plane.rotateX(S.theta); if (S.mode === 'fly') plane.rotateZ(-S.yawIn * 0.35);
   const gh = groundH(S.x, S.z); shadow.position.set(S.x, gh + 0.08, S.z); const h = Math.max(0, S.y - gh); shadow.scale.setScalar(Math.max(0.5, 3.5 - h * 0.04)); shadow.material.opacity = Math.max(0.03, 0.3 - h * 0.004);
-  if (S.mode === 'hub' || S.mode === 'intro') { S.camA += dt * 0.25; camera.position.set(S.x + Math.sin(S.camA) * 12, S.y + 4, S.z + Math.cos(S.camA) * 12); camera.lookAt(S.x, S.y, S.z); camera.fov = 55; }
-  else if (S.mode === 'launch' || S.mode === 'winding') { camTarget.set(S.x + 9, S.y + 4, S.z + 8); camera.position.lerp(camTarget, Math.min(1, dt * 4)); camera.lookAt(S.x, S.y + 0.5, S.z - 10); camera.fov = 60; }
+  if (S.mode === 'hub' || S.mode === 'intro') { S.camA += dt * 0.22; camera.position.set(S.x + Math.sin(S.camA) * 21, S.y + 7, S.z + Math.cos(S.camA) * 21); camera.lookAt(S.x, S.y - 1, S.z); camera.fov = 52; }
+  else if (S.mode === 'launch' || S.mode === 'winding') { camTarget.set(S.x + 3, S.y + 4.5, S.z + 16); camera.position.lerp(camTarget, Math.min(1, dt * 4)); camera.lookAt(S.x, S.y - 1.5, S.z - 9); camera.fov = 58; }
   else if (S.mode === 'result') { camera.lookAt(S.x, S.y, S.z); }
   else { const fx = Math.sin(S.yaw), fz = -Math.cos(S.yaw); const camDist = 16 + S.hs * 0.08; camTarget.set(S.x - fx * camDist, S.y + 6, S.z - fz * camDist); camera.position.lerp(camTarget, Math.min(1, dt * 5)); camera.lookAt(S.x + fx * 14, S.y + 1, S.z + fz * 14); camera.fov = 60 + clamp((S.hs - 25) * 0.4, 0, 18); }
   camera.updateProjectionMatrix();
