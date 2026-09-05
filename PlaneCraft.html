@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Plane Craft: Build &amp; Fly</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#2f7cf6; --blue-d:#1a4fb8; --gold:#ffc83d; --gold-d:#d9950c;
+    --green:#4bd06b; --green-d:#2a9a45; --red:#ff5b5b; --ink:#1b2437; --white:#fff;
+    --font:'Baloo 2','Nunito',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+  html,body{height:100%;overflow:hidden;background:#7ec8f5;font-family:var(--font);color:var(--white);touch-action:none}
+  #game{position:fixed;inset:0;display:block}
+  .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px calc(env(safe-area-inset-bottom,0px) + 16px)}
+  .hud .top{display:flex;flex-direction:column;gap:10px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:rgba(27,36,55,.55);backdrop-filter:blur(6px);padding:6px 12px;border-radius:999px;font-weight:800;font-size:16px;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+  .coin{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff2b0,var(--gold) 45%,var(--gold-d));box-shadow:inset 0 0 0 2px rgba(0,0,0,.12)}
+  .progress{position:relative;height:22px;border-radius:999px;background:linear-gradient(#0e2a5a,#0b1d3c);border:3px solid #fff;box-shadow:0 4px 0 rgba(0,0,0,.2);margin:6px 26px 0 26px}
+  .progress .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#6db2ff,#2f7cf6);border-radius:999px;transition:width .12s linear}
+  .progress .pct{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:12px;font-weight:800;letter-spacing:.5px}
+  .progress .picon{position:absolute;top:50%;left:0;transform:translate(-50%,-50%);width:44px;height:44px;filter:drop-shadow(0 2px 0 rgba(0,0,0,.25));transition:left .12s linear}
+  .progress .flag{position:absolute;right:-24px;top:50%;transform:translateY(-50%);width:32px;height:32px}
+  .hud .bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+  .stat{display:flex;flex-direction:column;gap:4px}
+  .stat .big{font-size:34px;font-weight:800;line-height:1;text-shadow:0 3px 0 rgba(0,0,0,.25)}
+  .stat .sm{font-size:13px;font-weight:800;opacity:.9;letter-spacing:1px}
+  .boostbtn{pointer-events:auto;width:92px;height:92px;border-radius:50%;border:4px solid #fff;background:radial-gradient(circle at 50% 30%,#ff9d4d,#ff5b1f);box-shadow:0 6px 0 #b83a0c,0 10px 20px rgba(0,0,0,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:15px;position:relative;overflow:hidden;transition:transform .08s}
+  .boostbtn:active,.boostbtn.on{transform:translateY(4px);box-shadow:0 2px 0 #b83a0c}
+  .boostbtn .fuel{position:absolute;left:0;right:0;bottom:0;height:100%;background:rgba(0,0,0,.35);transform-origin:bottom;transform:scaleY(1)}
+  .boostbtn span{position:relative;z-index:1}
+  .boostbtn.empty{filter:grayscale(.8);opacity:.6}
+  .chevrons{position:fixed;left:50%;top:52%;transform:translateX(-50%);display:none;flex-direction:column;gap:-6px;pointer-events:none;opacity:.9}
+  .chevrons.show{display:flex;animation:chev .5s linear infinite}
+  .chevrons svg{width:44px;height:22px;filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
+  @keyframes chev{0%{transform:translate(-50%,-6px);opacity:.55}100%{transform:translate(-50%,10px);opacity:1}}
+  .toast{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);font-size:30px;font-weight:800;text-shadow:0 3px 0 rgba(0,0,0,.3);opacity:0;pointer-events:none;white-space:nowrap}
+  .toast.show{animation:pop .9s ease-out forwards}
+  @keyframes pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}70%{opacity:1;transform:translate(-50%,-70%) scale(1)}100%{opacity:0;transform:translate(-50%,-90%) scale(1)}}
+  .flash{position:fixed;inset:0;background:#ff5b5b;opacity:0;pointer-events:none}
+  .overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;pointer-events:auto}
+  .hidden{display:none!important}
+  .title{font-size:44px;line-height:1;font-weight:800;text-shadow:0 4px 0 var(--blue-d),0 8px 18px rgba(0,0,0,.25);letter-spacing:-1px}
+  .sub{font-size:18px;font-weight:800;opacity:.95;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+  .btn{pointer-events:auto;font-family:var(--font);border:0;border-radius:18px;padding:16px 34px;font-size:22px;font-weight:800;color:#fff;background:linear-gradient(#5eea7a,var(--green));box-shadow:0 6px 0 var(--green-d),0 10px 22px rgba(0,0,0,.25);text-shadow:0 2px 0 rgba(0,0,0,.2);cursor:pointer;transition:transform .08s,box-shadow .08s}
+  .btn:active{transform:translateY(4px);box-shadow:0 2px 0 var(--green-d)}
+  .btn.blue{background:linear-gradient(#6db2ff,var(--blue));box-shadow:0 6px 0 var(--blue-d),0 10px 22px rgba(0,0,0,.25)}
+  .btn.blue:active{box-shadow:0 2px 0 var(--blue-d)}
+  .panel{background:rgba(255,255,255,.96);color:var(--ink);border-radius:26px;padding:18px 16px;width:min(420px,100%);box-shadow:0 14px 40px rgba(0,0,0,.28)}
+  .panel h2{font-size:26px;font-weight:800;margin-bottom:6px}
+  .panel .dist{font-size:42px;font-weight:800;color:var(--blue);line-height:1}
+  .panel .earn{display:flex;justify-content:center;gap:8px;align-items:center;font-size:18px;font-weight:800;margin:8px 0 12px}
+  .ups{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  .up{pointer-events:auto;font-family:var(--font);border:0;border-radius:16px;padding:10px 8px;background:#f1f4fa;box-shadow:inset 0 0 0 2px #dfe6f2;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:3px;color:var(--ink)}
+  .up .nm{font-size:15px;font-weight:800;display:flex;justify-content:space-between}
+  .up .lv{font-size:11px;font-weight:800;color:#6b7a90;letter-spacing:.5px}
+  .up .cost{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:800;color:var(--gold-d)}
+  .up .bar{height:6px;border-radius:99px;background:#dfe6f2;overflow:hidden}
+  .up .bar i{display:block;height:100%;background:var(--blue);width:0}
+  .up.ok{background:#fff7dd;box-shadow:inset 0 0 0 2px var(--gold)}
+  .up.max{opacity:.55}
+  .planeName{font-size:14px;font-weight:800;color:#6b7a90;margin-bottom:8px;letter-spacing:.5px}
+  .hint{font-size:13px;opacity:.9;font-weight:800;text-shadow:0 2px 0 rgba(0,0,0,.25);max-width:320px}
+  .tapmsg{font-size:24px;font-weight:800;animation:blink 1.2s ease-in-out infinite;text-shadow:0 3px 0 rgba(0,0,0,.25)}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  .evolve{font-size:18px;color:var(--green-d);font-weight:800;margin-bottom:6px}
+  .tiny{position:fixed;bottom:4px;right:8px;font-size:10px;opacity:.55;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div class="hud" id="hud">
+  <div class="top">
+    <div class="row">
+      <div class="pill"><span class="coin"></span><span id="coins">0</span></div>
+      <div class="pill" id="levelPill">LEVEL 1</div>
+    </div>
+    <div class="progress" id="progress">
+      <div class="fill" id="pfill"></div>
+      <div class="pct" id="ppct">0%</div>
+      <svg class="picon" id="picon" viewBox="0 0 48 48"><path d="M4 26 L44 24 L4 22 L12 24 Z" fill="#fff" stroke="#1b2437" stroke-width="1.5"/><path d="M22 24 L14 10 L20 10 L32 24 Z" fill="#fff" stroke="#1b2437" stroke-width="1.5"/><path d="M22 24 L14 38 L20 38 L32 24 Z" fill="#e8edf5" stroke="#1b2437" stroke-width="1.5"/><path d="M8 24 L4 18 L7 18 L12 24 Z" fill="#ff5b5b" stroke="#1b2437" stroke-width="1.5"/></svg>
+      <svg class="flag" viewBox="0 0 32 32"><rect x="5" y="4" width="22" height="16" fill="#fff" stroke="#1b2437" stroke-width="1.5"/><rect x="5" y="4" width="5.5" height="5.3" fill="#1b2437"/><rect x="16" y="4" width="5.5" height="5.3" fill="#1b2437"/><rect x="10.5" y="9.3" width="5.5" height="5.3" fill="#1b2437"/><rect x="21.5" y="9.3" width="5.5" height="5.3" fill="#1b2437"/><rect x="5" y="14.6" width="5.5" height="5.4" fill="#1b2437"/><rect x="16" y="14.6" width="5.5" height="5.4" fill="#1b2437"/><rect x="4" y="3" width="2" height="26" fill="#1b2437"/></svg>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="stat"><div class="big" id="dist">0m</div><div class="sm" id="speed">0 KM/H · ALT 0m</div></div>
+    <div class="boostbtn" id="boost"><div class="fuel" id="fuelbar"></div><span>BOOST</span></div>
+  </div>
+</div>
+<div class="chevrons" id="chev">
+  <svg viewBox="0 0 44 22"><path d="M2 2 L22 18 L42 2" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <svg viewBox="0 0 44 22"><path d="M2 2 L22 18 L42 2" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+<div class="toast" id="toast"></div>
+<div class="flash" id="flash"></div>
+
+<div class="overlay" id="startOverlay">
+  <div class="title">PLANE CRAFT</div>
+  <div class="sub">Build &amp; Fly</div>
+  <div style="height:22vh"></div>
+  <div class="tapmsg">TAP TO FLY</div>
+  <div class="hint">Hold to dive for speed. Drag or use ← → to steer. Release to glide. Hit BOOST for a burst.</div>
+</div>
+
+<div class="overlay hidden" id="resultOverlay">
+  <div class="panel">
+    <div class="evolve hidden" id="evolveMsg">✨ Your plane evolved!</div>
+    <h2 id="resTitle">LEVEL COMPLETE!</h2>
+    <div class="dist" id="resDist">0m</div>
+    <div class="earn"><span class="coin"></span><span id="resCoins">+0</span></div>
+    <div class="planeName" id="planeName">PAPER PLANE</div>
+    <div class="ups" id="ups"></div>
+    <button class="btn" id="flyBtn">FLY ✈</button>
+  </div>
+</div>
+<div class="tiny">replica · not affiliated with the original</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+if (typeof THREE === 'undefined') { document.body.innerHTML = '<div style="padding:40px;font-family:sans-serif;color:#fff">Could not load Three.js. Check your connection and reload.</div>'; return; }
+
+/* ---------- save ---------- */
+const SAVE_KEY = 'planecraft_save_v1';
+const UPS = [
+  { key:'speed',  name:'Speed',  icon:'🚀', base:40,  desc:'Ramp launch' },
+  { key:'wings',  name:'Wings',  icon:'🪽', base:55,  desc:'Glide ratio' },
+  { key:'boost',  name:'Boost',  icon:'🔥', base:35,  desc:'Fuel tank' },
+  { key:'income', name:'Income', icon:'💰', base:70,  desc:'Coin bonus' },
+];
+const MAX_LV = 20;
+let save = { coins:0, level:1, best:0, up:{speed:0,wings:0,boost:0,income:0} };
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.up) save = Object.assign(save, s); } catch(e){}
+function persist(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch(e){} }
+function upCost(u){ const lv = save.up[u.key]; return Math.round(u.base * Math.pow(1.32, lv) / 5) * 5; }
+function goalFor(level){ return Math.round(350 * Math.pow(1.3, level-1) / 10) * 10; }
+function tierOf(){ const t = save.up.speed + save.up.wings + save.up.boost + save.up.income; return t >= 30 ? 3 : t >= 16 ? 2 : t >= 6 ? 1 : 0; }
+const TIER_NAMES = ['PAPER PLANE','GLIDER','PROP PLANE','JET'];
+const BIOMES = [
+  { name:'meadow', sky:0x7ec8f5, fog:0xa9dcfb, ground:0x6fcf62, ground2:0x5cb84f, tree:0x3ea34a, trunk:0x8a5a2b },
+  { name:'desert', sky:0xf5c98a, fog:0xf7d9b2, ground:0xe4b366, ground2:0xd39f52, tree:0x5f9e4a, trunk:0x9c6a3a },
+  { name:'snow',   sky:0xbfe3ff, fog:0xe6f4ff, ground:0xf2f7fb, ground2:0xdfe9f2, tree:0x2f6d4a, trunk:0x5c4030 },
+];
+
+/* ---------- three setup ---------- */
+const canvas = document.getElementById('game');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, 1, 0.5, 2000);
+const hemi = new THREE.HemisphereLight(0xffffff, 0x88aa66, 0.55); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff4d6, 0.65); sun.position.set(60, 120, 40); scene.add(sun);
+function resize(){ const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+
+const mat = (color, extra) => new THREE.MeshLambertMaterial(Object.assign({ color }, extra||{}));
+const M = {
+  white: mat(0xffffff), grey: mat(0xe8edf5), red: mat(0xff5b5b), dark: mat(0x1b2437), blue: mat(0x2f7cf6),
+  gold: mat(0xffc83d, { emissive:0x6b4a00 }), plank1: mat(0xd9b07a), plank2: mat(0xc99a5f), post: mat(0x8a5a2b),
+  blade: mat(0xf5f7fa), tower: mat(0xeef1f5), balloon: [mat(0xff5b5b), mat(0x2f7cf6), mat(0xffc83d), mat(0x4bd06b), mat(0xff8ad1)],
+  basket: mat(0x8a5a2b), ring: mat(0x4bd06b, { emissive:0x0b4a1c }), cloud: mat(0xffffff), rock: mat(0xc98a5a), cactus: mat(0x3f9a4c),
+  shadow: new THREE.MeshBasicMaterial({ color:0x000000, transparent:true, opacity:0.25 }), flag1: mat(0xffffff), flag2: mat(0x1b2437),
+};
+const G = {
+  coin: new THREE.CylinderGeometry(1.1, 1.1, 0.35, 14), ring: new THREE.TorusGeometry(5.5, 0.55, 10, 28),
+  cone: new THREE.ConeGeometry(1, 1, 7), cyl: new THREE.CylinderGeometry(1, 1, 1, 8), box: new THREE.BoxGeometry(1,1,1),
+  sph: new THREE.SphereGeometry(1, 12, 10), circle: new THREE.CircleGeometry(1, 16),
+};
+
+/* ---------- ramp ---------- */
+const RAMP_LEN = 110, RAMP_TOP = 44, RAMP_BOT = 12;
+function rampY(z){ const t = Math.min(1, Math.max(0, -z / RAMP_LEN)); let y = RAMP_BOT + (RAMP_TOP - RAMP_BOT) * (1 - t) * (1 - t); if (t > 0.86) { const k = (t - 0.86) / 0.14; y += 7 * k * k; } return y; }
+function rampSlope(z){ const d = 0.5; return Math.atan2(rampY(z + d) - rampY(z - d), 2 * d); } // positive when descending forward (toward -z)
+const rampGroup = new THREE.Group(); scene.add(rampGroup);
+(function buildRamp(){
+  const step = 2.6;
+  for (let z = 1; z > -RAMP_LEN - 1; z -= step) {
+    const zc = z - step / 2, y = rampY(zc), slope = rampSlope(zc);
+    const plank = new THREE.Mesh(G.box, (Math.round(-z / step) % 2) ? M.plank1 : M.plank2);
+    plank.scale.set(14, 0.8, step * 1.05 + 0.4); plank.position.set(0, y - 0.4, zc); plank.rotation.x = -slope; rampGroup.add(plank);
+    for (const sx of [-7.4, 7.4]) { const rail = new THREE.Mesh(G.box, M.post); rail.scale.set(0.6, 1.6, step + 0.3); rail.position.set(sx, y + 0.3, zc); rail.rotation.x = -slope; rampGroup.add(rail); }
+    if (Math.round(-z / step) % 3 === 0) for (const sx of [-6.2, 6.2]) { const post = new THREE.Mesh(G.cyl, M.post); post.scale.set(0.5, y, 0.5); post.position.set(sx, y / 2 - 0.5, zc); rampGroup.add(post); }
+  }
+  const platform = new THREE.Mesh(G.box, M.plank1); platform.scale.set(16, 1, 8); platform.position.set(0, RAMP_TOP - 0.5, 4); rampGroup.add(platform);
+  for (const sx of [-6.5, 6.5]) for (const sz of [1, 7]) { const p = new THREE.Mesh(G.cyl, M.post); p.scale.set(0.7, RAMP_TOP, 0.7); p.position.set(sx, RAMP_TOP/2 - 0.5, sz); rampGroup.add(p); }
+})();
+
+/* ---------- ground / sky ---------- */
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), mat(0x6fcf62)); ground.rotation.x = -Math.PI/2; scene.add(ground);
+const patches = new THREE.Group(); scene.add(patches);
+const patchMat = mat(0x5cb84f);
+for (let i = 0; i < 60; i++) { const p = new THREE.Mesh(G.circle, patchMat); p.rotation.x = -Math.PI/2; p.scale.setScalar(6 + Math.random() * 14); patches.add(p); }
+function placePatches(zBase){ let i = 0; for (const p of patches.children) { p.position.set((Math.random() - 0.5) * 400, 0.05, zBase - i * 25 - Math.random() * 20); i++; } }
+const shadow = new THREE.Mesh(G.circle, M.shadow); shadow.rotation.x = -Math.PI/2; shadow.position.y = 0.08; scene.add(shadow);
+
+/* ---------- plane model ---------- */
+let plane = new THREE.Group(); scene.add(plane);
+let propeller = null, planeBody = null;
+function buildPlane(tier, wingLv){
+  scene.remove(plane); plane = new THREE.Group(); scene.add(plane);
+  planeBody = new THREE.Group(); plane.add(planeBody); propeller = null;
+  const ws = 1 + wingLv * 0.03; // wingspan scale
+  const add = (geo, m, sx, sy, sz, x, y, z, rx, ry, rz) => { const o = new THREE.Mesh(geo, m); o.scale.set(sx, sy, sz); o.position.set(x, y, z); o.rotation.set(rx||0, ry||0, rz||0); planeBody.add(o); return o; };
+  if (tier === 0) { // paper plane
+    const s = new THREE.Shape(); s.moveTo(0, -2.6); s.lineTo(2.4 * ws, 1.8); s.lineTo(0.35, 1.2); s.lineTo(0, 1.6); s.lineTo(-0.35, 1.2); s.lineTo(-2.4 * ws, 1.8); s.closePath();
+    const wing = new THREE.Mesh(new THREE.ShapeGeometry(s), new THREE.MeshLambertMaterial({ color:0xffffff, side:THREE.DoubleSide })); wing.rotation.x = -Math.PI/2; wing.rotation.z = Math.PI; planeBody.add(wing);
+    add(G.box, M.grey, 0.25, 0.9, 4.2, 0, -0.45, 0);
+    add(G.box, M.red, 0.32, 0.3, 1.2, 0, 0.02, -1.6);
+  } else if (tier === 1) { // glider
+    add(G.box, M.white, 0.7, 0.7, 5.2, 0, 0, 0); add(G.sph, M.blue, 0.4, 0.4, 0.9, 0, 0.25, -1.3);
+    add(G.box, M.white, 7.4 * ws, 0.14, 1.2, 0, 0.2, -0.4); add(G.box, M.red, 1.2, 0.16, 1.2, -3.1 * ws, 0.21, -0.4); add(G.box, M.red, 1.2, 0.16, 1.2, 3.1 * ws, 0.21, -0.4);
+    add(G.box, M.white, 2.4, 0.12, 0.8, 0, 0.3, 2.3); add(G.box, M.red, 0.12, 1.1, 0.9, 0, 0.7, 2.3);
+  } else if (tier === 2) { // prop plane
+    add(G.cyl, M.red, 0.65, 2.6, 0.65, 0, 0, 0, Math.PI/2); add(G.sph, M.red, 0.65, 0.65, 0.9, 0, 0, 2.6); add(G.sph, M.blue, 0.45, 0.5, 0.9, 0, 0.45, -0.6);
+    add(G.box, M.white, 6.6 * ws, 0.18, 1.5, 0, 0.1, -0.2); add(G.box, M.red, 1.4, 0.2, 1.5, -2.7 * ws, 0.11, -0.2); add(G.box, M.red, 1.4, 0.2, 1.5, 2.7 * ws, 0.11, -0.2);
+    add(G.box, M.white, 2.6, 0.14, 0.9, 0, 0.2, 2.2); add(G.box, M.white, 0.14, 1.2, 1.0, 0, 0.75, 2.3);
+    add(G.cyl, M.dark, 0.35, 0.3, 0.35, 0, 0, -2.75, Math.PI/2);
+    propeller = new THREE.Group(); propeller.position.set(0, 0, -2.95); planeBody.add(propeller);
+    const b1 = new THREE.Mesh(G.box, M.dark); b1.scale.set(0.22, 2.8, 0.08); propeller.add(b1); const b2 = b1.clone(); b2.rotation.z = Math.PI/2; propeller.add(b2);
+    for (const sx of [-0.8, 0.8]) { add(G.cyl, M.dark, 0.14, 0.9, 0.14, sx, -0.75, 0.2); add(G.cyl, M.dark, 0.3, 0.16, 0.3, sx, -1.2, 0.2, Math.PI/2, 0, Math.PI/2); }
+  } else { // jet
+    add(G.cyl, M.white, 0.7, 5.2, 0.7, 0, 0, 0, Math.PI/2); add(G.cone, M.red, 0.7, 1.6, 0.7, 0, 0, -3.4, -Math.PI/2); add(G.sph, M.blue, 0.42, 0.5, 1.1, 0, 0.45, -1.4);
+    const wl = new THREE.Mesh(G.box, M.white); wl.scale.set(3.6 * ws, 0.16, 1.8); wl.position.set(-2 * ws, 0, 0.6); wl.rotation.y = 0.55; planeBody.add(wl);
+    const wr = wl.clone(); wr.position.x = 2 * ws; wr.rotation.y = -0.55; planeBody.add(wr);
+    add(G.box, M.red, 1.6, 0.14, 0.8, -1.0, 0.2, 2.4, 0, 0.5); add(G.box, M.red, 1.6, 0.14, 0.8, 1.0, 0.2, 2.4, 0, -0.5); add(G.box, M.red, 0.14, 1.4, 1.1, 0, 0.8, 2.3, 0.3);
+    for (const sx of [-1.2, 1.2]) { add(G.cyl, M.dark, 0.38, 1.6, 0.38, sx, -0.35, 1.0, Math.PI/2); }
+  }
+  planeBody.scale.setScalar(0.6); // models are built nose toward -z (forward)
+}
+
+/* ---------- world chunks ---------- */
+const CHUNK = 150;
+const chunks = new Map();
+let biome = BIOMES[0];
+const items = []; // { mesh, kind, x, y, z, alive, chunk }
+function rand(a, b){ return a + Math.random() * (b - a); }
+function makeTree(x, z, s){
+  const g = new THREE.Group();
+  if (biome.name === 'desert') { const c = new THREE.Mesh(G.cyl, M.cactus); c.scale.set(0.6, 4 * s, 0.6); c.position.y = 2 * s; g.add(c); const a = new THREE.Mesh(G.cyl, M.cactus); a.scale.set(0.45, 2 * s, 0.45); a.position.set(0.9, 2.6 * s, 0); g.add(a); }
+  else { const t = new THREE.Mesh(G.cyl, mat(biome.trunk)); t.scale.set(0.5, 2.2 * s, 0.5); t.position.y = 1.1 * s; g.add(t);
+    const tm = mat(biome.tree); for (let i = 0; i < 3; i++) { const c = new THREE.Mesh(G.cone, tm); const r = (3.2 - i * 0.7) * s; c.scale.set(r, 3.2 * s, r); c.position.y = (2.8 + i * 1.5) * s; g.add(c); } }
+  g.position.set(x, 0, z); g.rotation.y = Math.random() * 6.28; return g;
+}
+function makeWindmill(x, z){
+  const g = new THREE.Group(); const h = rand(26, 36);
+  const t = new THREE.Mesh(G.cyl, M.tower); t.scale.set(1.1, h, 1.1); t.position.y = h / 2; g.add(t);
+  const hub = new THREE.Group(); hub.position.set(0, h, 1.4); g.add(hub);
+  for (let i = 0; i < 3; i++) { const b = new THREE.Mesh(G.box, M.blade); b.scale.set(1.1, 13, 0.25); b.position.y = 6.5; const p = new THREE.Group(); p.rotation.z = i * 2.094; p.add(b); hub.add(p); }
+  const cap = new THREE.Mesh(G.sph, M.red); cap.scale.setScalar(1.3); cap.position.set(0, h, 0.4); g.add(cap);
+  g.position.set(x, 0, z); g.userData.hub = hub; g.userData.spin = rand(0.4, 0.9); return g;
+}
+function makeMesa(x, z){ const g = new THREE.Group(); const h = rand(14, 30), w = rand(10, 22); const b = new THREE.Mesh(G.box, M.rock); b.scale.set(w, h, w * rand(0.6, 1.2)); b.position.y = h/2; g.add(b); const top = new THREE.Mesh(G.box, mat(0xd99a6a)); top.scale.set(w*0.7, h*0.35, w*0.7); top.position.y = h + h*0.17; g.add(top); g.position.set(x, 0, z); return g; }
+function makeCloud(x, y, z){ const g = new THREE.Group(); for (let i = 0; i < 4; i++) { const c = new THREE.Mesh(G.sph, M.cloud); const s = rand(3, 6); c.scale.set(s * 1.4, s, s); c.position.set(i * 4 - 6, rand(-1, 1), 0); g.add(c); } g.position.set(x, y, z); return g; }
+function makeBalloon(x, y, z){
+  const g = new THREE.Group(); const m = M.balloon[Math.floor(Math.random() * M.balloon.length)];
+  const env = new THREE.Mesh(G.sph, m); env.scale.set(4, 4.6, 4); g.add(env);
+  const cone = new THREE.Mesh(G.cone, m); cone.scale.set(2.6, 3.4, 2.6); cone.position.y = -4.6; cone.rotation.x = Math.PI; g.add(cone);
+  const bk = new THREE.Mesh(G.box, M.basket); bk.scale.set(1.6, 1.3, 1.6); bk.position.y = -7.4; g.add(bk);
+  g.position.set(x, y, z); g.userData.bob = Math.random() * 6.28; return g;
+}
+function addItem(kind, mesh, chunkObj){ chunkObj.group.add(mesh); const it = { kind, mesh, alive:true, x:mesh.position.x, y:mesh.position.y, z:mesh.position.z }; items.push(it); chunkObj.items.push(it); return it; }
+let finishZ = -Infinity, finishGate = null;
+function buildChunk(i){
+  const z0 = -i * CHUNK, z1 = z0 - CHUNK; // z0 > z1
+  const group = new THREE.Group(); scene.add(group); const c = { group, items:[] }; chunks.set(i, c);
+  const nearRamp = z0 > -RAMP_LEN - 40;
+  const treeCount = biome.name === 'desert' ? 8 : 16;
+  for (let k = 0; k < treeCount; k++) { let x = rand(-170, 170); if (nearRamp && Math.abs(x) < 20) x += x < 0 ? -22 : 22; group.add(makeTree(x, rand(z1, z0), rand(0.8, 1.6))); }
+  if (biome.name === 'desert') for (let k = 0; k < 3; k++) { let x = rand(-180, 180); if (Math.abs(x) < 40) x += x < 0 ? -50 : 50; group.add(makeMesa(x, rand(z1, z0))); }
+  else if (Math.random() < 0.8) { let x = rand(-120, 120); if (Math.abs(x) < 30) x += x < 0 ? -40 : 40; group.add(makeWindmill(x, rand(z1, z0))); }
+  for (let k = 0; k < 3; k++) group.add(makeCloud(rand(-200, 200), rand(55, 90), rand(z1, z0)));
+  // background balloons
+  for (let k = 0; k < 2; k++) { const b = makeBalloon(rand(120, 220) * (Math.random() < 0.5 ? -1 : 1), rand(30, 70), rand(z1, z0)); b.userData.deco = true; group.add(b); }
+  if (nearRamp) return c;
+  // coins
+  const lines = 2 + Math.floor(Math.random() * 2);
+  for (let l = 0; l < lines; l++) {
+    const cx = (l === 0 && i === 1) ? 0 : rand(-24, 24), cz = rand(z1 + 25, z0 - 10), baseY = (l === 0 && i === 1) ? 26 : rand(6, 40), n = 5 + Math.floor(Math.random() * 4), arc = Math.random() < 0.5;
+    for (let k = 0; k < n; k++) { const coin = new THREE.Mesh(G.coin, M.gold); coin.rotation.x = Math.PI/2; const y = arc ? baseY + Math.sin(k / (n - 1) * Math.PI) * 8 : baseY; coin.position.set(cx, y, cz - k * 5); addItem('coin', coin, c); }
+  }
+  // boost rings
+  if (Math.random() < 0.75) { const ring = new THREE.Mesh(G.ring, M.ring); ring.position.set(rand(-30, 30), rand(8, 38), rand(z1 + 10, z0 - 10)); addItem('ring', ring, c); }
+  // obstacle balloons
+  const nb = 1 + Math.floor(Math.random() * 2);
+  for (let k = 0; k < nb; k++) { const b = makeBalloon(rand(-38, 38), rand(10, 46), rand(z1 + 10, z0 - 10)); addItem('balloon', b, c); }
+  // finish gate
+  if (finishZ <= z0 && finishZ > z1 && !finishGate) {
+    finishGate = new THREE.Group();
+    for (const sx of [-24, 24]) { const p = new THREE.Mesh(G.cyl, M.flag2); p.scale.set(0.8, 46, 0.8); p.position.set(sx, 23, 0); finishGate.add(p); }
+    for (let k = 0; k < 12; k++) for (let r = 0; r < 2; r++) { const sq = new THREE.Mesh(G.box, ((k + r) % 2) ? M.flag1 : M.flag2); sq.scale.set(4, 3, 0.4); sq.position.set(-22 + k * 4, 47 + r * 3, 0); finishGate.add(sq); }
+    finishGate.position.set(0, 0, finishZ); group.add(finishGate);
+  }
+  return c;
+}
+function dropChunk(i){ const c = chunks.get(i); if (!c) return; scene.remove(c.group); for (const it of c.items) it.alive = false; chunks.delete(i); }
+function clearWorld(){ for (const i of Array.from(chunks.keys())) dropChunk(i); items.length = 0; finishGate = null; }
+function updateChunks(z){ const cur = Math.max(0, Math.floor(-z / CHUNK)); for (let i = cur; i <= cur + 5; i++) if (!chunks.has(i)) buildChunk(i); for (const i of Array.from(chunks.keys())) if (i < cur - 1) dropChunk(i); if (items.length > 400) { let w = 0; for (const it of items) if (it.alive) items[w++] = it; items.length = w; } }
+function applyBiome(){
+  biome = BIOMES[(save.level - 1) % BIOMES.length];
+  scene.background = new THREE.Color(biome.sky); scene.fog = new THREE.Fog(biome.sky, 140, 560);
+  ground.material.color.setHex(biome.ground); patchMat.color.setHex(biome.ground2);
+}
+
+/* ---------- state ---------- */
+const S = { mode:'menu', x:0, y:RAMP_TOP, z:2, yaw:0, hs:0, vy:0, pitch:0, roll:0, fuel:0, fuelMax:0, coins:0, dist:0, hold:false, steer:0, boosting:false, done:false, result:null, crash:false, slide:0, t:0, evolved:false };
+const input = { down:false, startX:0, curX:0, keys:{}, boostDown:false };
+const UI = {
+  coins: document.getElementById('coins'), level: document.getElementById('levelPill'), fill: document.getElementById('pfill'), pct: document.getElementById('ppct'), picon: document.getElementById('picon'),
+  dist: document.getElementById('dist'), speed: document.getElementById('speed'), boost: document.getElementById('boost'), fuel: document.getElementById('fuelbar'), chev: document.getElementById('chev'),
+  toast: document.getElementById('toast'), flash: document.getElementById('flash'), start: document.getElementById('startOverlay'), result: document.getElementById('resultOverlay'),
+  resTitle: document.getElementById('resTitle'), resDist: document.getElementById('resDist'), resCoins: document.getElementById('resCoins'), ups: document.getElementById('ups'), fly: document.getElementById('flyBtn'), planeName: document.getElementById('planeName'), evolve: document.getElementById('evolveMsg'), hud: document.getElementById('hud'), bottom: document.querySelector('.hud .bottom'),
+};
+let currentTier = -1;
+function refreshPlane(){ const t = tierOf(); if (t !== currentTier || plane.userData.wingLv !== save.up.wings) { buildPlane(t, save.up.wings); plane.userData.wingLv = save.up.wings; if (currentTier !== -1 && t > currentTier) S.evolved = true; currentTier = t; } }
+function fmt(n){ return Math.round(n).toLocaleString('en-US'); }
+function toast(txt, color){ UI.toast.textContent = txt; UI.toast.style.color = color || '#fff'; UI.toast.classList.remove('show'); void UI.toast.offsetWidth; UI.toast.classList.add('show'); }
+function flash(){ UI.flash.style.transition = 'none'; UI.flash.style.opacity = 0.45; requestAnimationFrame(() => { UI.flash.style.transition = 'opacity .5s'; UI.flash.style.opacity = 0; }); }
+
+/* ---------- audio ---------- */
+let actx = null;
+function beep(f, d, type, vol){ try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); const o = actx.createOscillator(), g = actx.createGain(); o.type = type || 'square'; o.frequency.value = f; g.gain.setValueAtTime(vol || 0.05, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + d); o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + d); } catch(e){} }
+
+/* ---------- run lifecycle ---------- */
+let goal = goalFor(save.level);
+function resetRun(){
+  applyBiome(); refreshPlane(); clearWorld(); goal = goalFor(save.level); finishZ = -goal - RAMP_LEN;
+  Object.assign(S, { x:0, y:RAMP_TOP, z:2, yaw:0, hs:0, vy:0, pitch:0, roll:0, coins:0, dist:0, hold:false, steer:0, boosting:false, done:false, result:null, crash:false, slide:0, t:0 });
+  S.fuelMax = 1.2 + save.up.boost * 0.5; S.fuel = S.fuelMax;
+  placePatches(0); updateChunks(0);
+  UI.level.textContent = 'LEVEL ' + save.level; UI.coins.textContent = fmt(save.coins);
+  camera.position.set(0, RAMP_TOP + 6, 18); camera.lookAt(0, RAMP_TOP, -20);
+}
+function startRun(){ S.mode = 'ramp'; UI.start.classList.add('hidden'); UI.result.classList.add('hidden'); UI.hud.style.opacity = 1; beep(520, 0.12, 'triangle', 0.06); }
+function endRun(kind){
+  if (S.done) return; S.done = true; S.mode = 'result';
+  const mult = 1 + save.up.income * 0.25;
+  const earned = Math.round(S.coins * mult + Math.floor(S.dist / 10) * mult);
+  save.coins += earned; save.best = Math.max(save.best, Math.round(S.dist));
+  let title = 'TRY AGAIN';
+  if (kind === 'finish') { title = 'LEVEL COMPLETE!'; save.level += 1; beep(660, 0.15, 'triangle', 0.07); setTimeout(() => beep(880, 0.15, 'triangle', 0.07), 140); setTimeout(() => beep(1320, 0.25, 'triangle', 0.07), 280); }
+  else if (kind === 'crash') { title = 'CRASHED!'; }
+  persist();
+  UI.resTitle.textContent = title; UI.resDist.textContent = fmt(S.dist) + 'm'; UI.resCoins.textContent = '+' + fmt(earned);
+  UI.evolve.classList.add('hidden');
+  setTimeout(() => { renderShop(); UI.result.classList.remove('hidden'); }, 700);
+}
+function renderShop(){
+  UI.coins.textContent = fmt(save.coins); UI.planeName.textContent = TIER_NAMES[tierOf()] + '  ·  BEST ' + fmt(save.best) + 'm';
+  UI.ups.innerHTML = '';
+  for (const u of UPS) {
+    const lv = save.up[u.key], cost = upCost(u), can = save.coins >= cost && lv < MAX_LV;
+    const b = document.createElement('button'); b.className = 'up' + (can ? ' ok' : '') + (lv >= MAX_LV ? ' max' : '');
+    b.innerHTML = `<div class="nm"><span>${u.icon} ${u.name}</span><span class="lv">LV ${lv}</span></div><div class="bar"><i style="width:${lv / MAX_LV * 100}%"></i></div><div class="cost">${lv >= MAX_LV ? 'MAX' : `<span class="coin" style="width:12px;height:12px"></span>${fmt(cost)}`}</div>`;
+    b.addEventListener('click', () => { if (!can) { beep(180, 0.1, 'square', 0.04); return; } save.coins -= cost; save.up[u.key] += 1; persist(); beep(760, 0.08, 'square', 0.05); const before = currentTier; refreshPlane(); if (currentTier > before) { UI.evolve.classList.remove('hidden'); toast('EVOLVED: ' + TIER_NAMES[currentTier], '#ffe680'); } renderShop(); });
+    UI.ups.appendChild(b);
+  }
+}
+UI.fly.addEventListener('click', () => { resetRun(); startRun(); });
+
+/* ---------- input ---------- */
+function pointerDown(e){ if (S.mode === 'menu') { if (e.target.closest && e.target.closest('.overlay')) { resetRun(); startRun(); } return; } if (S.mode === 'result') return; if (e.target === UI.boost || UI.boost.contains(e.target)) return; input.down = true; input.startX = input.curX = e.clientX; }
+function pointerMove(e){ if (input.down) input.curX = e.clientX; }
+function pointerUp(){ input.down = false; }
+addEventListener('pointerdown', pointerDown); addEventListener('pointermove', pointerMove); addEventListener('pointerup', pointerUp); addEventListener('pointercancel', pointerUp);
+UI.boost.addEventListener('pointerdown', e => { e.stopPropagation(); input.boostDown = true; UI.boost.classList.add('on'); });
+const boostOff = () => { input.boostDown = false; UI.boost.classList.remove('on'); };
+UI.boost.addEventListener('pointerup', boostOff); UI.boost.addEventListener('pointercancel', boostOff); UI.boost.addEventListener('pointerleave', boostOff);
+addEventListener('keydown', e => { input.keys[e.code] = true; if (S.mode === 'menu' && (e.code === 'Space' || e.code === 'Enter')) { resetRun(); startRun(); } if (S.mode === 'result' && e.code === 'Enter') UI.fly.click(); if (e.code === 'Space') e.preventDefault(); });
+addEventListener('keyup', e => { input.keys[e.code] = false; });
+function readInput(){
+  const k = input.keys;
+  let steer = 0;
+  if (k.ArrowLeft || k.KeyA) steer -= 1; if (k.ArrowRight || k.KeyD) steer += 1;
+  if (input.down) { const dx = (input.curX - input.startX) / (innerWidth * 0.22); steer += Math.max(-1, Math.min(1, dx)); }
+  S.steer = Math.max(-1, Math.min(1, steer));
+  S.hold = input.down || !!(k.Space || k.ArrowDown || k.KeyS);
+  S.boosting = input.boostDown || !!(k.ShiftLeft || k.ShiftRight || k.KeyB || k.ArrowUp || k.KeyW);
+}
+
+/* ---------- physics ---------- */
+const GRAV = 9.8;
+function stepRamp(dt){
+  const slope = rampSlope(S.z);
+  const accel = GRAV * Math.sin(slope) * 1.4 + (S.hold ? 9 : 0) + 1.5 + save.up.speed * 0.9;
+  S.hs = Math.max(S.hs + accel * dt, 0); if (S.t < 0.05) S.hs = 6 + save.up.speed * 2;
+  S.z -= S.hs * Math.cos(slope) * dt; S.y = rampY(S.z) + 0.9; S.pitch = -slope;
+  if (S.z <= -RAMP_LEN) { // launch
+    const ang = 0.26 + Math.min(0.2, save.up.speed * 0.01); const v = S.hs;
+    S.hs = v * Math.cos(ang); S.vy = v * Math.sin(ang); S.mode = 'fly'; S.y = rampY(-RAMP_LEN) + 0.9; beep(300, 0.2, 'sawtooth', 0.04);
+  }
+}
+function stepFly(dt){
+  const ratio = 9 + save.up.wings * 1.0; // glide ratio: metres forward per metre of sink
+  if (S.hold) { const target = -S.hs * 0.7; S.vy += (target - S.vy) * Math.min(1, dt * 3); S.hs += GRAV * 0.62 * dt; }
+  else { const zoom = Math.max(0, S.hs - 28) * 0.7; const target = -S.hs / ratio + zoom; S.vy += (target - S.vy) * Math.min(1, dt * 2.6); S.hs -= (0.0025 * S.hs * S.hs + 0.3 + Math.max(0, S.vy) * 0.7) * dt; }
+  if (S.boosting && S.fuel > 0) { S.hs += 34 * dt; S.vy += 7 * dt; S.fuel = Math.max(0, S.fuel - dt); }
+  S.hs = Math.max(4, Math.min(S.hs, 140));
+  // steering
+  const targetYaw = S.steer * 0.7; S.yaw += (targetYaw - S.yaw) * Math.min(1, dt * 3.2);
+  S.x += Math.sin(S.yaw) * S.hs * dt; S.z -= Math.cos(S.yaw) * S.hs * dt; S.y += S.vy * dt;
+  S.roll += (-S.yaw * 0.8 - S.roll) * Math.min(1, dt * 4);
+  S.pitch = Math.atan2(S.vy, S.hs) * 0.9;
+  if (S.x > 200 || S.x < -200) { S.x = Math.max(-200, Math.min(200, S.x)); }
+  // collectibles
+  for (const it of items) {
+    if (!it.alive) continue; const dz = it.z - S.z; if (dz > 8 || dz < -8) continue;
+    const dx = it.x - S.x, dy = it.y - S.y, d2 = dx*dx + dy*dy + dz*dz;
+    if (it.kind === 'coin' && d2 < 5.5 * 5.5) { it.alive = false; it.mesh.visible = false; S.coins += 1; UI.coins.textContent = fmt(save.coins) + ' +' + S.coins; beep(1200 + S.coins * 8, 0.07, 'square', 0.03); }
+    else if (it.kind === 'ring' && d2 < 6.5 * 6.5) { it.alive = false; it.mesh.visible = false; S.hs += 12; S.vy += 4; S.fuel = Math.min(S.fuelMax, S.fuel + 0.9); toast('BOOST RING!', '#9dffb0'); beep(700, 0.15, 'triangle', 0.05); }
+    else if (it.kind === 'balloon' && d2 < 5.6 * 5.6) { it.alive = false; it.mesh.visible = false; S.hs *= 0.55; S.vy = Math.min(S.vy, 0) - 4; flash(); toast('OUCH!', '#ffb3b3'); beep(120, 0.25, 'sawtooth', 0.06); }
+  }
+  // ground
+  if (S.y <= 0.9) {
+    S.y = 0.9;
+    if (S.vy < -22) { S.crash = true; S.hs *= 0.3; flash(); beep(90, 0.4, 'sawtooth', 0.08); }
+    S.vy = 0; S.mode = 'slide';
+  }
+}
+function stepSlide(dt){
+  S.hs = Math.max(0, S.hs - (S.crash ? 40 : 14) * dt); S.z -= Math.cos(S.yaw) * S.hs * dt; S.x += Math.sin(S.yaw) * S.hs * dt; S.pitch *= 0.9; S.roll *= 0.9; S.y = 0.9;
+  if (S.hs < 0.5) endRun(S.crash ? 'crash' : 'land');
+}
+function checkFinish(){ if (S.dist >= goal && !S.done) { S.mode = 'finishfly'; S.slide = 0; toast('FINISH!', '#fff'); endRun('finish'); } }
+
+/* ---------- loop ---------- */
+let last = performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.033, (now - last) / 1000); last = now; S.t += dt;
+  readInput();
+  if (S.mode === 'ramp') stepRamp(dt);
+  else if (S.mode === 'fly') stepFly(dt);
+  else if (S.mode === 'slide') stepSlide(dt);
+  else if (S.mode === 'finishfly') { S.z -= S.hs * dt; S.x += Math.sin(S.yaw) * S.hs * dt; S.hs = Math.max(20, S.hs - 10 * dt); S.y = Math.max(6, S.y - S.hs * 0.05 * dt); }
+  if (S.mode !== 'menu') { S.dist = Math.max(0, -S.z - RAMP_LEN); if (S.mode === 'fly') checkFinish(); }
+  // plane transform
+  plane.position.set(S.x, S.y, S.z); plane.rotation.set(0, 0, 0); plane.rotateY(-S.yaw); plane.rotateX(S.pitch); plane.rotateZ(S.roll);
+  if (propeller) propeller.rotation.z += dt * (S.mode === 'fly' ? 40 : 12);
+  shadow.position.set(S.x, 0.08, S.z); const sh = Math.max(0.3, 3 - S.y * 0.04); shadow.scale.setScalar(sh); shadow.material.opacity = Math.max(0.03, 0.3 - S.y * 0.004);
+  // camera
+  const fx = Math.sin(S.yaw), fz = -Math.cos(S.yaw);
+  const camDist = 15 + S.hs * 0.06, camUp = 5.5 + (S.hold ? 1.5 : 0);
+  const cx = S.x - fx * camDist, cy = S.y + camUp, cz = S.z - fz * camDist;
+  if (S.mode === 'menu') { const a = S.t * 0.35; camera.position.set(S.x + Math.sin(a) * 8, S.y + 3, S.z + Math.cos(a) * 8); camera.lookAt(S.x, S.y + 0.3, S.z - 2); }
+  else { const lerp = Math.min(1, dt * 6);
+  camera.position.x += (cx - camera.position.x) * lerp; camera.position.y += (cy - camera.position.y) * lerp; camera.position.z += (cz - camera.position.z) * lerp;
+  camera.lookAt(S.x + fx * 16, S.y + 0.5, S.z + fz * 16); }
+  camera.fov = 60 + Math.min(20, Math.max(0, S.hs - 30) * 0.25); camera.updateProjectionMatrix();
+  // world upkeep
+  ground.position.set(S.x, 0, S.z); if (S.mode !== 'menu' && S.mode !== 'result') updateChunks(S.z);
+  for (const c of chunks.values()) for (const o of c.group.children) { if (o.userData.hub) o.userData.hub.rotation.z += dt * o.userData.spin; else if (o.userData.bob !== undefined) o.position.y += Math.sin(S.t * 1.3 + o.userData.bob) * 0.01; }
+  for (const it of items) if (it.alive && it.kind === 'coin') it.mesh.rotation.z += dt * 3; else if (it.alive && it.kind === 'ring') it.mesh.rotation.y = Math.sin(S.t * 2) * 0.2;
+  // hud
+  const pct = Math.min(1, S.dist / goal);
+  UI.fill.style.width = (pct * 100) + '%'; UI.pct.textContent = Math.round(pct * 100) + '%'; UI.picon.style.left = (pct * 100) + '%';
+  UI.dist.textContent = fmt(S.dist) + 'm'; UI.speed.textContent = Math.round(S.hs * 3.6) + ' KM/H · ALT ' + Math.round(S.y) + 'm';
+  UI.fuel.style.transform = 'scaleY(' + (1 - S.fuel / Math.max(0.01, S.fuelMax)) + ')'; UI.boost.classList.toggle('empty', S.fuel <= 0);
+  UI.chev.classList.toggle('show', S.hold && (S.mode === 'ramp' || S.mode === 'fly'));
+  UI.bottom.classList.toggle('hidden', S.mode === 'menu' || S.mode === 'result');
+  renderer.render(scene, camera);
+}
+resetRun(); S.mode = 'menu'; UI.hud.style.opacity = 1;
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
