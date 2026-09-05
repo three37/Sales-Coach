@@ -13,7 +13,7 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
   html,body{height:100%;overflow:hidden;background:#7ec8f5;font-family:var(--font);color:var(--white);touch-action:none}
-  #game{position:fixed;inset:0;display:block}
+  #game{position:fixed;inset:0;width:100%;height:100%;display:block}
   .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px calc(env(safe-area-inset-bottom,0px) + 16px)}
   .hud .top{display:flex;flex-direction:column;gap:10px}
   .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -156,8 +156,9 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, 1, 0.5, 2000);
 const hemi = new THREE.HemisphereLight(0xffffff, 0x88aa66, 0.55); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff4d6, 0.65); sun.position.set(60, 120, 40); scene.add(sun);
-function resize(){ const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); }
-addEventListener('resize', resize); resize();
+let viewW = 0, viewH = 0;
+function resize(){ const w = Math.max(1, canvas.clientWidth || innerWidth), h = Math.max(1, canvas.clientHeight || innerHeight); if (w === viewW && h === viewH) return; viewW = w; viewH = h; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 200)); if (window.visualViewport) visualViewport.addEventListener('resize', resize); resize();
 
 const mat = (color, extra) => new THREE.MeshLambertMaterial(Object.assign({ color }, extra||{}));
 const M = {
@@ -364,14 +365,16 @@ function renderShop(){
 UI.fly.addEventListener('click', () => { resetRun(); startRun(); });
 
 /* ---------- input ---------- */
-function pointerDown(e){ if (S.mode === 'menu') { if (e.target.closest && e.target.closest('.overlay')) { resetRun(); startRun(); } return; } if (S.mode === 'result') return; if (e.target === UI.boost || UI.boost.contains(e.target)) return; input.down = true; input.startX = input.curX = e.clientX; }
+const loadedAt = performance.now();
+UI.start.addEventListener('click', () => { if (S.mode !== 'menu' || performance.now() - loadedAt < 700) return; resetRun(); startRun(); });
+function pointerDown(e){ if (S.mode === 'menu' || S.mode === 'result') return; if (e.target === UI.boost || UI.boost.contains(e.target)) return; input.down = true; input.startX = input.curX = e.clientX; }
 function pointerMove(e){ if (input.down) input.curX = e.clientX; }
 function pointerUp(){ input.down = false; }
 addEventListener('pointerdown', pointerDown); addEventListener('pointermove', pointerMove); addEventListener('pointerup', pointerUp); addEventListener('pointercancel', pointerUp);
 UI.boost.addEventListener('pointerdown', e => { e.stopPropagation(); input.boostDown = true; UI.boost.classList.add('on'); });
 const boostOff = () => { input.boostDown = false; UI.boost.classList.remove('on'); };
 UI.boost.addEventListener('pointerup', boostOff); UI.boost.addEventListener('pointercancel', boostOff); UI.boost.addEventListener('pointerleave', boostOff);
-addEventListener('keydown', e => { input.keys[e.code] = true; if (S.mode === 'menu' && (e.code === 'Space' || e.code === 'Enter')) { resetRun(); startRun(); } if (S.mode === 'result' && e.code === 'Enter') UI.fly.click(); if (e.code === 'Space') e.preventDefault(); });
+addEventListener('keydown', e => { if (e.repeat) { if (e.code === 'Space') e.preventDefault(); return; } input.keys[e.code] = true; if (S.mode === 'menu' && (e.code === 'Space' || e.code === 'Enter') && performance.now() - loadedAt > 700) { resetRun(); startRun(); } if (S.mode === 'result' && e.code === 'Enter') UI.fly.click(); if (e.code === 'Space') e.preventDefault(); });
 addEventListener('keyup', e => { input.keys[e.code] = false; });
 function readInput(){
   const k = input.keys;
@@ -433,7 +436,7 @@ let last = performance.now();
 function frame(now){
   requestAnimationFrame(frame);
   const dt = Math.min(0.033, (now - last) / 1000); last = now; S.t += dt;
-  readInput();
+  resize(); readInput();
   if (S.mode === 'ramp') stepRamp(dt);
   else if (S.mode === 'fly') stepFly(dt);
   else if (S.mode === 'slide') stepSlide(dt);
