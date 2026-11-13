@@ -4,3 +4,4 @@ dev-dist
 e2e/output
 *.log
 .DS_Store
+.netlify
