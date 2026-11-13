@@ -5,6 +5,7 @@ import { parseMissionFile, serializeMission, MissionFileError, FILE_FORMAT } fro
 import { missionToKml } from './kml';
 import { decodeTerrarium, tilePixel } from './elevation';
 import { sampleMission } from './sample';
+import { buildIdea, IDEAS } from './ideas';
 import { newMission, newWaypoint, type Mission } from './types';
 
 function square(): Mission {
@@ -126,6 +127,65 @@ describe('flight path', () => {
     expect(p.aglResolved).toBe(true);
     expect(p.relAlt).toEqual([40, 70, 30]);
     expect(sampleFlight(p, 0)!.altAglM).toBeCloseTo(40);
+  });
+});
+
+describe('return to start', () => {
+  it('adds a closing leg to the totals and the preview', () => {
+    const m = square();
+    const open = buildFlightPath(m);
+    m.defaults.finish = 'returnToStart';
+    m.waypoints[0].altitudeM = 20;
+    m.waypoints[2].speedMps = 10;
+    const p = buildFlightPath(m);
+    const back = haversine(m.waypoints[2], m.waypoints[0]);
+    expect(p.returns).toBe(true);
+    expect(p.totalDistanceM).toBeCloseTo(open.totalDistanceM + back, 3);
+    expect(p.totalDurationS).toBeCloseTo(open.totalDurationS + back / 10, 3);
+    // Half way home: between the last and first waypoint, heading back, altitude half way between them.
+    const mid = sampleFlight(p, p.totalDurationS - back / 10 / 2)!;
+    expect(mid.wpIndex).toBe(2);
+    expect(mid.nextWpIndex).toBe(0);
+    expect(mid.altRelM).toBeCloseTo(30);
+    const end = sampleFlight(p, p.totalDurationS)!;
+    expect(end.phase).toBe('done');
+    expect(haversine(end, m.waypoints[0])).toBeLessThan(0.01);
+    expect(end.distanceM).toBeCloseTo(p.totalDistanceM, 3);
+    expect(end.altRelM).toBe(20);
+  });
+  it('survives the mission file, and old files default to ending at the last waypoint', () => {
+    const m = square();
+    m.defaults.finish = 'returnToStart';
+    expect(parseMissionFile(serializeMission(m)).mission.defaults.finish).toBe('returnToStart');
+    const old = JSON.parse(serializeMission(m));
+    delete old.mission.defaults.finish;
+    expect(parseMissionFile(JSON.stringify(old)).mission.defaults.finish).toBe('stop');
+  });
+});
+
+describe('route ideas', () => {
+  const c = { lat: 40.76, lng: -113.9 };
+  it('orbit keeps every waypoint on the circle, facing the subject, and closes', () => {
+    const wps = buildIdea('orbit', c, 80, 'p', 40);
+    expect(wps).toHaveLength(9);
+    for (const w of wps) {
+      expect(haversine(c, w)).toBeCloseTo(80, 0);
+      expect(w.heading).toEqual({ mode: 'poi', poiId: 'p' });
+    }
+    expect(haversine(wps[0], wps[8])).toBeLessThan(0.01);
+    expect(bearing(c, wps[0])).toBeCloseTo(180, 0);
+  });
+  it('every idea produces a flyable route of the requested size', () => {
+    for (const idea of IDEAS) {
+      const m = newMission('t');
+      m.pois = [{ id: 'p', name: 'P', ...c, heightM: 0, groundElevM: null }];
+      m.waypoints = buildIdea(idea.id, c, 100, 'p', 40);
+      const p = buildFlightPath(m);
+      expect(m.waypoints.length).toBeGreaterThanOrEqual(3);
+      expect(p.totalDistanceM).toBeGreaterThan(150);
+      expect(Math.max(...m.waypoints.map((w) => haversine(c, w)))).toBeLessThan(210);
+      expect(parseMissionFile(serializeMission(m)).mission).toEqual(m);
+    }
   });
 });
 

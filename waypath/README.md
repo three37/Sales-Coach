@@ -53,7 +53,8 @@ After the first visit the app starts without a connection. Map tiles you have al
 - **Map tools** (bottom of the map): *Select* to pick and drag markers, *Waypoint* to add waypoints by tapping, *POI* to place a point of interest.
 - **Route tab**: the waypoint list with reorder buttons. Tap a waypoint to edit altitude, speed to the next waypoint, heading, gimbal pitch, hold time and camera action.
 - **Preview tab**: play, pause, scrub and change playback speed. Shows the drone, camera direction, altitude, heading and current waypoint.
-- **Mission tab**: name, default speed and altitude, altitude reference, default heading, straight or smooth turns, units and map background.
+- **Mission tab**: name, default speed and altitude, altitude reference, default heading, straight or smooth turns, what happens after the last waypoint, units and map background.
+- **Route ideas** (Route tab): ready-made shapes (orbit, pull-back reveal, fly-over, survey grid) placed around the selected point of interest or the middle of the map. They are geometry only and know nothing about obstacles or airspace at the location.
 - **Top bar**: missions (new, open, rename, duplicate, delete), undo, redo, export and import.
 
 Keyboard: `V` select, `W` waypoint, `P` POI, `F` fit route, `Esc` cancel, `Delete` remove selected, arrow keys nudge the selected marker (Shift for 10 m), `Ctrl/⌘ Z` undo, `Ctrl/⌘ Shift Z` redo, `Space` play or pause on the Preview tab.
@@ -64,6 +65,7 @@ Keyboard: `V` select, `W` waypoint, `P` POI, `F` fit route, `Esc` cancel, `Delet
 - Each leg is flown at the speed set on the waypoint it leaves, or the mission default.
 - Duration is the sum of leg length ÷ leg speed, plus every hold. Acceleration, wind, and time spent rotating or climbing are not modelled.
 - The route line, the totals, the preview and the KML route all read one path built in `src/domain/path.ts`, so they cannot disagree. Smooth turns are part of that same path.
+- *Fly back to waypoint 1* (Mission tab) adds a closing leg at the last waypoint's speed, ending at waypoint 1's altitude. It is a planned leg, not the aircraft's return-to-home failsafe, which is set in your flight app.
 - With smooth turns the drone starts turning a set distance before each waypoint and cuts inside the corner. A waypoint with a hold or camera action is still flown to exactly.
 
 ### Altitude reference
@@ -95,11 +97,11 @@ npm test           # route maths, mission file round trip, KML, terrain decoding
 npm run build && npm run e2e   # the full workflow in real browsers
 ```
 
-`npm run e2e` drives the built app through: first launch with the sample mission, new mission, three waypoints, a POI, speed change and time estimate, per-waypoint overrides, undo and redo, dragging, reordering, preview, reload and recovery, export, reimport, rename, duplicate, delete, smooth turns, the above-ground gate, and screen rotation. It needs Playwright (`npm i -D playwright && npx playwright install chromium webkit`) and, optionally on Linux, `webkit2gtk-driver` and `xvfb` for WebKitGTK.
+`npm run e2e` drives the built app through: first launch with the sample mission, new mission, three waypoints, a POI, speed change and time estimate, per-waypoint overrides, undo and redo, dragging, reordering, preview, reload and recovery, export, reimport, rename, duplicate, delete, smooth turns, the return leg, route ideas, the above-ground gate, and screen rotation. It needs Playwright (`npm i -D playwright && npx playwright install chromium webkit`) and, optionally on Linux, `webkit2gtk-driver` and `xvfb` for WebKitGTK.
 
 ## What has been verified
 
-Last full run: 177 checks passed, 0 failed.
+Last full run: 193 checks passed, 0 failed.
 
 | Check | Chromium 153 (Playwright) | WebKit (WebKitGTK 2.52.6) | Physical device |
 | --- | --- | --- | --- |
@@ -108,6 +110,7 @@ Last full run: 177 checks passed, 0 failed.
 | Full workflow, tablet | Passed at 820×1180, touch input | Passed at 820×1180, mouse input | Not run |
 | Full workflow, desktop | Passed at 1280×800, mouse and keyboard | Passed at 1280×800, mouse and keyboard | Not run |
 | Rotation keeps plan and controls | Passed | Passed | Not run |
+| Return leg to waypoint 1; route ideas | Passed | Passed | Not run |
 | Reload recovers the mission (IndexedDB) | Passed | Passed | Not run |
 | Mission file export → reimport identical | Passed, through the browser's real download | Passed; file captured as the page handed it to the browser | Not run |
 | Totals match an independent calculation | Passed | Passed | n/a |

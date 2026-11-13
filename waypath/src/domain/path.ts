@@ -46,6 +46,8 @@ export interface FlightPath {
   totalDurationS: number;
   /** The whole route as one line. */
   line: LatLng[];
+  /** True when the plan ends with a leg from the last waypoint back to waypoint 1. */
+  returns: boolean;
 }
 
 export interface FlightSample extends LatLng {
@@ -182,6 +184,18 @@ export function buildFlightPath(mission: Mission): FlightPath {
     t += durationS;
     d += lengthM;
   }
+  // Optional closing leg back to waypoint 1, flown at the last waypoint's speed.
+  const returns = mission.defaults.finish === 'returnToStart' && n >= 2;
+  if (returns) {
+    const points = dedupe([anchors[n - 1], { lat: wps[0].lat, lng: wps[0].lng }]);
+    const lengthM = points.length > 1 ? haversine(points[0], points[1]) : 0;
+    const speedMps = wpSpeed(mission, wps[n - 1]);
+    const durationS = lengthM / speedMps;
+    legs.push({ from: n - 1, to: 0, speedMps, points, cum: points.length > 1 ? [0, lengthM] : [0], lengthM, durationS, t0: t, d0: d });
+    for (const p of points) line.push(p);
+    t += durationS;
+    d += lengthM;
+  }
   if (n === 1) line.push(anchors[0]);
 
   return {
@@ -197,6 +211,7 @@ export function buildFlightPath(mission: Mission): FlightPath {
     totalDistanceM: d,
     totalDurationS: t,
     line: dedupe(line),
+    returns,
   };
 }
 
@@ -237,7 +252,7 @@ function headingAt(path: FlightPath, i: number, f: number, p: LatLng, course: nu
   const m = path.mission;
   const spec = wpHeading(m, m.waypoints[i]);
   if (spec.mode === 'custom') {
-    const next = m.waypoints[i + 1];
+    const next = m.waypoints[i + 1] ?? (path.returns ? m.waypoints[0] : undefined);
     const nextSpec = next ? wpHeading(m, next) : null;
     return nextSpec?.mode === 'custom' ? lerpAngle(spec.deg, nextSpec.deg, f) : spec.deg;
   }
@@ -281,7 +296,7 @@ export function sampleFlight(path: FlightPath, tIn: number): FlightSample | null
     if (!hasElevation(m)) return null;
     const g0 = m.waypoints[0].groundElevM as number;
     const gi = m.waypoints[i].groundElevM as number;
-    const gj = (m.waypoints[i + 1] ?? m.waypoints[i]).groundElevM as number;
+    const gj = (m.waypoints[i + 1] ?? (path.returns ? m.waypoints[0] : m.waypoints[i])).groundElevM as number;
     return altRel + g0 - lerp(gi, gj, f);
   };
 
@@ -310,6 +325,28 @@ export function sampleFlight(path: FlightPath, tIn: number): FlightSample | null
     }
   }
 
+  // Back at waypoint 1 at the end of a return leg.
+  if (path.returns && t >= path.totalDurationS) {
+    const back = path.legs[path.legs.length - 1];
+    const p = { lat: m.waypoints[0].lat, lng: m.waypoints[0].lng };
+    const course = pointOnLeg(back, back.lengthM).course;
+    return {
+      ...p,
+      t,
+      phase: 'done',
+      wpIndex: 0,
+      nextWpIndex: -1,
+      altRelM: path.relAlt[0],
+      altAglM: agl(0, 0, path.relAlt[0]),
+      headingDeg: headingAt(path, n - 1, 1, p, course),
+      gimbalPitchDeg: gimbalAt(path, gimbals, n - 1, 1, p, path.relAlt[0]),
+      speedMps: 0,
+      distanceM: path.totalDistanceM,
+      recording,
+      photos,
+    };
+  }
+
   // Otherwise at a waypoint: holding, about to start, or finished.
   let i = 0;
   for (let k = 0; k < n; k++) if (path.arrive[k] <= t) i = k;
@@ -323,7 +360,7 @@ export function sampleFlight(path: FlightPath, tIn: number): FlightSample | null
       : 0;
   const altRel = path.relAlt[i];
   const phase: FlightSample['phase'] =
-    n > 1 && i === n - 1 && t >= path.totalDurationS ? 'done' : m.waypoints[i].holdSec > 0 ? 'hold' : 'idle';
+    n > 1 && i === n - 1 && t >= path.totalDurationS && !path.returns ? 'done' : m.waypoints[i].holdSec > 0 ? 'hold' : 'idle';
   return {
     ...p,
     t,

@@ -113,6 +113,8 @@ export function parseMissionFile(text: string): ParsedMissionFile {
     heading: heading(d.heading, poiIds, warn, 'The mission default heading') ?? base.heading,
     turnMode: d.turnMode === 'curved' ? ('curved' as const) : ('straight' as const),
     turnDistanceM: clamp(num(d.turnDistanceM) ?? base.turnDistanceM, LIMITS.turnDistance.min, LIMITS.turnDistance.max),
+    // Added after the first release; files without it end at the last waypoint, as before.
+    finish: d.finish === 'returnToStart' ? ('returnToStart' as const) : ('stop' as const),
   };
 
   const waypoints: Waypoint[] = (Array.isArray(src.waypoints) ? src.waypoints : []).filter(isObj).map((w, i) => {

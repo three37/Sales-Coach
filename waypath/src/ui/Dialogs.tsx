@@ -5,7 +5,7 @@ import { useStore } from '../store/store';
 import { Icon } from './Icon';
 import { MIME, canShareFile, saveFile, shareFile } from './files';
 
-function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;

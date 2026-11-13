@@ -1,7 +1,9 @@
 import { hasElevation, isStop, wpAltitude, wpSpeed, type FlightPath } from '../domain/path';
 import { LIMITS, type GimbalSpec, type HeadingSpec, type Mission, type Poi, type Waypoint, type WaypointAction } from '../domain/types';
 import { altFromDisplay, altToDisplay, fmtAlt, fmtDistance, fmtSpeed, speedFromDisplay, speedToDisplay, unitLabel, type Units } from '../domain/units';
+import { useState } from 'react';
 import { useStore } from '../store/store';
+import { IdeasDialog } from './IdeasDialog';
 import { Icon } from './Icon';
 import { NumberField, Section, SelectField, Toggle } from './fields';
 
@@ -44,6 +46,7 @@ export function RouteTab({ path }: { path: FlightPath }) {
   const selection = useStore((s) => s.selection);
   const units = useStore((s) => s.settings.units);
   const st = useStore.getState;
+  const [ideas, setIdeas] = useState(false);
 
   if (selection?.kind === 'wp') {
     const i = mission.waypoints.findIndex((w) => w.id === selection.id);
@@ -82,7 +85,7 @@ export function RouteTab({ path }: { path: FlightPath }) {
                     </span>
                     <span className="row-sub">
                       {[
-                        leg ? `${fmtDistance(leg.lengthM, units)} to next` : 'End of route',
+                        leg ? `${fmtDistance(leg.lengthM, units)} ${leg.to === 0 ? 'back to waypoint 1' : 'to next'}` : 'End of route',
                         w.heading ? describeHeading(mission, w.heading) : '',
                         w.holdSec > 0 ? `hold ${w.holdSec}s` : '',
                         w.action !== 'none' ? ACTION_LABEL[w.action].toLowerCase() : '',
@@ -126,13 +129,17 @@ export function RouteTab({ path }: { path: FlightPath }) {
         )}
       </Section>
 
-      {mission.waypoints.length > 1 && (
-        <div className="btn-row">
+      <div className="btn-row">
+        <button type="button" className="btn" onClick={() => setIdeas(true)}>
+          <Icon name="target" size={18} /> Route ideas…
+        </button>
+        {mission.waypoints.length > 1 && (
           <button type="button" className="btn" onClick={() => st().reverseRoute()}>
             <Icon name="swap" size={18} /> Reverse route
           </button>
-        </div>
-      )}
+        )}
+      </div>
+      {ideas && <IdeasDialog onClose={() => setIdeas(false)} />}
     </div>
   );
 }
@@ -222,8 +229,8 @@ function WaypointEditor({ path, index, units }: { path: FlightPath; index: numbe
         <p className="hint">{terrain}</p>
       </Section>
 
-      <Section title="Speed to next waypoint">
-        {last ? (
+      <Section title={last && path.returns ? 'Speed back to waypoint 1' : 'Speed to next waypoint'}>
+        {last && !path.returns ? (
           <p className="hint">This is the last waypoint, so no leg follows it.</p>
         ) : (
           <>
@@ -333,6 +340,7 @@ function WaypointEditor({ path, index, units }: { path: FlightPath; index: numbe
 
 function PoiEditor({ mission, poi, units }: { mission: Mission; poi: Poi; units: Units }) {
   const st = useStore.getState;
+  const [ideas, setIdeas] = useState(false);
   const set = (patch: Partial<Poi>, key?: string) => st().updatePoi(poi.id, patch, key);
   const users = mission.waypoints.filter((w) => {
     const h = w.heading ?? mission.defaults.heading;
@@ -360,6 +368,9 @@ function PoiEditor({ mission, poi, units }: { mission: Mission; poi: Poi; units:
         <button type="button" className="btn" onClick={() => st().updateDefaults({ heading: { mode: 'poi', poiId: poi.id } })}>
           <Icon name="target" size={18} /> Face this for the whole mission
         </button>
+        <button type="button" className="btn" onClick={() => setIdeas(true)}>
+          Route ideas around this…
+        </button>
       </div>
       <Section title="Position">
         <PositionFields lat={poi.lat} lng={poi.lng} onChange={(p) => set(p, 'pos')} />
@@ -369,6 +380,7 @@ function PoiEditor({ mission, poi, units }: { mission: Mission; poi: Poi; units:
           <Icon name="trash" size={18} /> Delete point of interest
         </button>
       </div>
+      {ideas && <IdeasDialog onClose={() => setIdeas(false)} />}
     </div>
   );
 }

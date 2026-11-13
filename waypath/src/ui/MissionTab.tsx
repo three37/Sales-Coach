@@ -128,6 +128,24 @@ export function MissionTab({ path }: { path: FlightPath }) {
         )}
       </Section>
 
+      <Section title="After the last waypoint">
+        <Segmented
+          label="After the last waypoint"
+          value={d.finish}
+          onChange={(v) => st().updateDefaults({ finish: v })}
+          options={[
+            { value: 'stop', label: 'End there' },
+            { value: 'returnToStart', label: 'Fly back to waypoint 1' },
+          ]}
+        />
+        <p className="hint">
+          {d.finish === 'returnToStart'
+            ? 'A final leg back to waypoint 1 is included in the route, distance, time and preview. It is flown at the last waypoint’s speed and ends at waypoint 1’s altitude.'
+            : 'The plan ends at the last waypoint.'}{' '}
+          This is a planned leg, not the drone’s own return-to-home: that failsafe, and what the aircraft does when a mission ends, are set in your flight app.
+        </p>
+      </Section>
+
       <Section title="Display">
         <Segmented
           label="Units"

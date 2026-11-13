@@ -382,6 +382,51 @@ export async function runFlow(d, { url, viewport, kind, record }) {
     );
   });
 
+  await step('Fly back to waypoint 1 after the last waypoint', async () => {
+    await tab(d, 3);
+    const before = await stats(d);
+    await clickText(d, 'Fly back to waypoint 1');
+    await sleep(250);
+    const after = await stats(d);
+    await toList(d);
+    const lastRow = await text(d, '[aria-label="Edit waypoint 3"]');
+    await tab(d, 2);
+    await d.click('[aria-label="Back to start"]');
+    await d.click('[aria-label="Playback speed"] button:nth-child(5)');
+    await d.click('[aria-label="Play"]');
+    await until(d, `return /Finished back at 1/.test(document.querySelector('[data-testid="tm-waypoint"]').textContent)`, 'return leg to finish', 40000);
+    const flown = (await d.ev(`return [...document.querySelectorAll('.telemetry div')].find((x) => x.querySelector('dt').textContent === 'Flown').querySelector('dd').textContent`)).replace(/\s+/g, ' ');
+    const drone = await center(d, '.drone-marker');
+    const home = await center(d, '.wp-marker[data-index="1"]');
+    const num = (s) => parseFloat(s) * (/km/.test(s) ? 1000 : 1);
+    check(
+      'Fly back to waypoint 1 after the last waypoint',
+      num(after.distance) > num(before.distance) && secs(after.duration) > secs(before.duration) && /back to waypoint 1/.test(lastRow) && flown.startsWith(`${after.distance} of ${after.distance}`) && Math.hypot(drone.x - home.x, drone.y - home.y) < 3,
+      `${before.distance} / ${before.duration} → ${after.distance} / ${after.duration} with the return leg; preview ended on waypoint 1 at ${flown}`,
+    );
+  });
+
+  await step('Route ideas add a ready-made route', async () => {
+    await d.click('.mission-btn');
+    await clickText(d, 'New mission');
+    await until(d, `return document.querySelectorAll('.wp-marker').length === 0 && !document.querySelector('.dialog')`, 'empty mission');
+    await toList(d);
+    await clickText(d, 'Route ideas…');
+    await d.fill(await field(d, 'Size'), '80');
+    await clickText(d, 'Add orbit');
+    await until(d, `return document.querySelectorAll('.wp-marker').length === 9 && document.querySelectorAll('.poi-marker').length === 1`, 'orbit markers');
+    const s = await stats(d);
+    const inView = await d.ev(`const m = document.querySelector('.map').getBoundingClientRect(); return [...document.querySelectorAll('.wp-marker')].every((e) => { const r = e.getBoundingClientRect(); return r.left >= m.left && r.right <= m.right && r.top >= m.top && r.bottom <= m.bottom; })`);
+    const num = (x) => parseFloat(x) * (/km/.test(x) ? 1000 : 1);
+    // Eight straight chords of an 80 m circle come to about 490 m.
+    const okLength = Math.abs(num(s.distance) - 490) < 8;
+    await d.click('[aria-label="Undo"]');
+    await sleep(200);
+    const undone = await count(d, '.wp-marker');
+    await d.click('[aria-label="Redo"]');
+    check('Route ideas add a ready-made route', okLength && inView && undone === 0, `orbit: ${s.waypoints} waypoints, ${s.distance}, ${s.duration}; fits the map; one undo removes it`);
+  });
+
   await step('Above-ground mode is only offered with terrain data', async () => {
     await tab(d, 3);
     await sleep(1200);
@@ -401,7 +446,7 @@ export async function runFlow(d, { url, viewport, kind, record }) {
         const inView = (sel) => [...document.querySelectorAll(sel)].every((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.left >= 0 && r.top >= 0 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1; });
         const s = document.querySelector('.stage').getBoundingClientRect();
         return { ok: inView('.topbar button, .toolbar button, .map-tools button, .panel-head, .tabs button'), mapW: s.width, mapH: s.height, markers: document.querySelectorAll('.wp-marker').length, w: innerWidth, h: innerHeight };`);
-      check('Rotating the screen keeps the plan and controls', l.ok && l.markers === 3 && l.mapW >= 200 && l.mapH >= 200, `${l.w}×${l.h}, map ${Math.round(l.mapW)}×${Math.round(l.mapH)}`);
+      check('Rotating the screen keeps the plan and controls', l.ok && l.markers === 9 && l.mapW >= 200 && l.mapH >= 200, `${l.w}×${l.h}, map ${Math.round(l.mapW)}×${Math.round(l.mapH)}`);
     });
   }
 

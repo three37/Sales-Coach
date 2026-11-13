@@ -26,7 +26,7 @@ export function PreviewTab({ path }: { path: FlightPath }) {
   const atEnd = preview.t >= total;
   const n = path.mission.waypoints.length;
   const where =
-    s.phase === 'move' ? `Flying ${s.wpIndex + 1} → ${s.nextWpIndex + 1}` : s.phase === 'hold' ? `Holding at ${s.wpIndex + 1}` : s.phase === 'done' ? `Finished at ${n}` : `At ${s.wpIndex + 1}`;
+    s.phase === 'move' ? `Flying ${s.wpIndex + 1} → ${s.nextWpIndex + 1}` : s.phase === 'hold' ? `Holding at ${s.wpIndex + 1}` : s.phase === 'done' ? (path.returns ? 'Finished back at 1' : `Finished at ${n}`) : `At ${s.wpIndex + 1}`;
 
   return (
     <div className="tab-body">

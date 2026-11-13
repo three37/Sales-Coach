@@ -20,6 +20,8 @@ export type WaypointAction = 'none' | 'photo' | 'recordStart' | 'recordStop';
 /** 'takeoff' = metres above the takeoff point. 'agl' = metres above the ground under each waypoint. */
 export type AltitudeRef = 'takeoff' | 'agl';
 export type TurnMode = 'straight' | 'curved';
+/** What the plan does after the last waypoint: end there, or fly back to waypoint 1. */
+export type FinishMode = 'stop' | 'returnToStart';
 
 export interface Waypoint extends LatLng {
   id: string;
@@ -52,6 +54,7 @@ export interface MissionDefaults {
   turnMode: TurnMode;
   /** How far before/after a waypoint a curved turn starts and ends. */
   turnDistanceM: number;
+  finish: FinishMode;
 }
 
 export interface Mission {
@@ -86,6 +89,7 @@ export function defaultDefaults(): MissionDefaults {
     heading: { mode: 'route' },
     turnMode: 'straight',
     turnDistanceM: 10,
+    finish: 'stop',
   };
 }
 

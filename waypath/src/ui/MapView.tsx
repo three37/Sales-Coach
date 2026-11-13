@@ -136,6 +136,15 @@ export function MapView() {
     );
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 110 }), 'bottom-left');
     map.on('style.load', () => setStyleTick((n) => n + 1));
+    const reportView = () => {
+      const c = map.getCenter();
+      const b = map.getBounds();
+      const widthM = b.getSouthWest().distanceTo(b.getSouthEast());
+      const heightM = b.getSouthWest().distanceTo(b.getNorthWest());
+      useStore.getState().setMapView({ center: { lat: c.lat, lng: c.lng }, spanM: Math.min(widthM, heightM) });
+    };
+    map.on('moveend', reportView);
+    map.on('load', reportView);
     map.on('click', (e) => {
       const target = e.originalEvent.target as Element | null;
       if (target?.closest('.wp-marker, .poi-marker')) return;

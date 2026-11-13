@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { lookupElevations } from '../domain/elevation';
+import { buildIdea, type IdeaId } from '../domain/ideas';
 import { hasElevation } from '../domain/path';
 import { sampleMission } from '../domain/sample';
 import {
@@ -51,6 +52,8 @@ interface State {
   preview: { t: number; playing: boolean; rate: number };
   /** Bumped to ask the map to frame the whole route. */
   fitRequest: number;
+  /** Where the map is looking, so route ideas can be placed there. */
+  mapView: { center: LatLng; spanM: number } | null;
 
   init: () => Promise<void>;
   edit: (fn: (m: Mission) => void, coalesceKey?: string) => void;
@@ -69,6 +72,9 @@ interface State {
   removeSelected: () => void;
   removeItem: (sel: NonNullable<Selection>) => void;
   reverseRoute: () => void;
+  /** Add a ready-made route shape around a subject. Returns how many waypoints were added. */
+  addIdea: (id: IdeaId, sizeM: number) => number;
+  setMapView: (v: { center: LatLng; spanM: number }) => void;
 
   select: (s: Selection) => void;
   setTool: (t: Tool) => void;
@@ -200,6 +206,7 @@ export const useStore = create<State>()((set, get) => {
     toast: null,
     preview: { t: 0, playing: false, rate: 5 },
     fitRequest: 0,
+    mapView: null,
 
     async init() {
       try {
@@ -348,6 +355,23 @@ export const useStore = create<State>()((set, get) => {
     reverseRoute() {
       get().edit((m) => void m.waypoints.reverse());
     },
+
+    addIdea(id, sizeM) {
+      const { mission, selection, mapView } = get();
+      // Build around the selected point of interest if there is one, otherwise the middle of the map.
+      const chosen = selection?.kind === 'poi' ? mission.pois.find((p) => p.id === selection.id) : undefined;
+      const center = chosen ?? mapView?.center;
+      if (!center) return 0;
+      const poi: Poi = chosen ?? { id: newId(), name: `Subject ${mission.pois.length + 1}`, lat: center.lat, lng: center.lng, heightM: 0, groundElevM: null };
+      const waypoints = buildIdea(id, center, sizeM, poi.id, mission.defaults.altitudeM);
+      get().edit((m) => {
+        if (!chosen) m.pois.push(poi);
+        m.waypoints.push(...waypoints);
+      });
+      set({ selection: null, fitRequest: get().fitRequest + 1 });
+      return waypoints.length;
+    },
+    setMapView: (mapView) => set({ mapView }),
 
     select: (selection) => set({ selection }),
     setTool: (tool) => set({ tool }),
